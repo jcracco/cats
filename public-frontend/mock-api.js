@@ -1006,8 +1006,8 @@ function parseSalaryFloor(val) {
   return m ? parseInt(m[0]) : null;
 }
 
-// ── Mock API — overrides the real api() function from pipeline-core.php ───────
-async function api(action, method="GET", body=null, params={}) {
+// ── Mock API — exposed as window.mockApi, called by api() in pipeline-core.php ─
+window.mockApi = async function(action, method="GET", body=null, params={}) {
   // Simulate network delay
   await new Promise(r => setTimeout(r, 60));
 

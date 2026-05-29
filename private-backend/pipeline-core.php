@@ -17,8 +17,11 @@ const localToday = () => {
 };
 
 
-// API helper — auth cookie is sent automatically by the browser
+// API helper — routes to mockApi in demo mode, real fetch in production
 async function api(action, method="GET", body=null, params={}) {
+  if (window.IS_DEMO && window.mockApi) {
+    return window.mockApi(action, method, body, params);
+  }
   const qs = new URLSearchParams({action, ...params}).toString();
   const opts = { method, headers:{"Content-Type":"application/json"} };
   if (body) opts.body = JSON.stringify(body);
