@@ -21,6 +21,9 @@ $IS_DEMO = (
 <?php if ($IS_DEMO): ?>
   <script src="mock-api.js"></script>
 <?php endif; ?>
+<?php if ($IS_DEMO && defined('UMAMI_ENABLED') && UMAMI_ENABLED): ?>
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="<?php echo UMAMI_WEBSITE_ID; ?>"></script>
+<?php endif; ?>
 </head>
 <body>
 <div id="root"></div>

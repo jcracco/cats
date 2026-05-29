@@ -52,6 +52,7 @@ After my layoff in November 2025 I was tracking applications in a Google Sheet. 
 | Database | MySQL / MariaDB |
 | Hosting | Shared hosting (Plesk) |
 | Auth | bcrypt password hash, server-side session tokens, 30-day cookie |
+| Analytics | Umami (privacy-friendly, optional) |
 
 No npm, no webpack, no framework — intentional. This runs on any shared PHP host with zero build tooling.
 

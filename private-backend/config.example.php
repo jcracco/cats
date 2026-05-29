@@ -32,9 +32,13 @@ define('SESSION_COOKIE',   'cats_session');
 define('SESSION_DURATION', 60 * 60 * 24 * 30); // 30 days
 
 // ── Backup ───────────────────────────────────────────────────────────────────
-define('BACKUP_EMAIL_ENABLED', true);               // ← set to false to skip email
+define('BACKUP_EMAIL_ENABLED', false);               // ← set to true to enable emailing backup file
 define('BACKUP_EMAIL_TO',      'your@email.com');   // ← replace
 define('BACKUP_EMAIL_FROM',    'backup@yourdomain.com'); // ← replace
 
+// ── Analytics ─────────────────────────────────────────────────────────────────
+define('UMAMI_ENABLED', false);                    // ← set to true to enable
+define('UMAMI_WEBSITE_ID', 'your-website-id');     // ← replace with your Umami ID
+
 // ── Demo detection ────────────────────────────────────────────────────────────
-define('IS_DEMO_DOMAIN', 'demo.cracco.ch');             // ← replace with your demo domain
+define('IS_DEMO_DOMAIN', 'demo.url.tld');             // ← replace with your demo domain
