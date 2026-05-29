@@ -34,6 +34,14 @@ require_once __DIR__ . '/bootstrap.php';
 require_once PRIVATE_PATH . 'config.php';
 require_once PRIVATE_PATH . 'db.php';
 
+// Block direct API access from the demo domain
+if (isset($_SERVER['HTTP_HOST']) && 
+    strpos($_SERVER['HTTP_HOST'], IS_DEMO_DOMAIN) !== false) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'error' => 'API not available in demo mode']);
+    exit;
+}
+
 // ── Session token store (flat file, above web root) ───────────────────────────
 define('TOKEN_FILE', PRIVATE_PATH . 'session_tokens.json');
 
