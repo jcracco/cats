@@ -61,11 +61,12 @@ No npm, no webpack, no framework — intentional. This runs on any shared PHP ho
 
 ```
 CATS/
-├── public-frontend/        # Web root
-│   ├── index.php           # Single page app shell, demo detection
-│   ├── api.php             # REST-ish API (all CRUD)
-│   ├── pipeline.css        # Styles (dark + light theme)
-│   └── mock-api.js         # Demo mode: in-memory mock API + seed data
+├── public-frontend/            # Web root
+│   ├── index.php               # Single page app shell, demo detection
+│   ├── api.php                 # REST-ish API (all CRUD)
+│   ├── pipeline.css            # Styles (dark + light theme)
+│   ├── mock-api.js
+│   └── bootstrap.example.php   # copy to bootstrap.php, set PRIVATE_PATH
 │
 ├── private-backend/        # Above web root (never web-accessible)
 │   ├── config.example.php  # Configuration template → copy to config.php
@@ -100,6 +101,8 @@ GRANT ALL PRIVILEGES ON cats_db.* TO 'cats_user'@'localhost';
 **2. Configuration**
 
 Copy `private-backend/config.example.php` to `config.php` in the same folder and fill in your values.
+
+Copy `public-frontend/bootstrap.example.php` to `bootstrap.php` in the same folder and set `PRIVATE_PATH` to the absolute path of your `private-backend/` directory.
 
 To generate a hashed password, run once and copy the output:
 ```php

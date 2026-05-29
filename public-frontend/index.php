@@ -1,5 +1,6 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/bootstrap.php';
+require_once PRIVATE_PATH . 'config.php';
 $IS_DEMO = (
     isset($_SERVER['HTTP_HOST']) &&
     isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], IS_DEMO_DOMAIN) !== false

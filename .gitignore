@@ -1,5 +1,6 @@
 # Sensitive — never commit
 config.php
+bootstrap.php
 session_tokens.json
 backups/
 

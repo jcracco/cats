@@ -30,7 +30,8 @@
  *   GET    ?action=stats
  */
 
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/bootstrap.php';
+require_once PRIVATE_PATH . 'config.php';
 require_once PRIVATE_PATH . 'db.php';
 
 // ── Session token store (flat file, above web root) ───────────────────────────

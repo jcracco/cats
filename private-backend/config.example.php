@@ -15,7 +15,7 @@
  */
 
 // ── Private path ──────────────────────────────────────────────────────────────
-define('PRIVATE_PATH', '/path/to/your/private/cats/');  // ← replace
+// PRIVATE_PATH is defined in public-frontend/bootstrap.php (not in this file)
 
 // ── Database ──────────────────────────────────────────────────────────────────
 define('DB_HOST', '127.0.0.1');
