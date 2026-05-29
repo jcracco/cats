@@ -228,7 +228,7 @@ const SEED_APPS = [
     "source": "Company website",
     "applied_through": "iCIMS",
     "resume_version": "TPM",
-    "rating": 85,
+    "rating": 92,
     "status": "Applied",
     "job_id": null,
     "job_link": "https://example.com/jobs/9",
@@ -358,14 +358,14 @@ const SEED_APPS = [
     "source": "Dice",
     "applied_through": "Workday",
     "resume_version": "SPO",
-    "rating": 66,
+    "rating": 58,
     "status": "Applied",
     "job_id": null,
     "job_link": "https://example.com/jobs/14",
     "dashboard_link": null,
-    "salary_requested": "130",
-    "salary_listed": "140-165",
-    "salary_type": "Yearly",
+    "salary_requested": "65",
+    "salary_listed": "65-75",
+    "salary_type": "Hourly",
     "contacts": null,
     "notes": null,
     "job_description": null,
@@ -462,14 +462,14 @@ const SEED_APPS = [
     "source": "Indeed",
     "applied_through": "LinkedIn Easy Apply",
     "resume_version": "TPM",
-    "rating": 69,
+    "rating": 61,
     "status": "Applied",
     "job_id": null,
     "job_link": "https://example.com/jobs/18",
     "dashboard_link": null,
-    "salary_requested": "130",
-    "salary_listed": "120-140",
-    "salary_type": "Yearly",
+    "salary_requested": "65",
+    "salary_listed": "65-75",
+    "salary_type": "Hourly",
     "contacts": null,
     "notes": null,
     "job_description": null,
@@ -722,7 +722,7 @@ const SEED_APPS = [
     "source": "BuiltIn",
     "applied_through": "SmartRecruiters",
     "resume_version": "SPO",
-    "rating": 66,
+    "rating": 58,
     "status": "No Answer",
     "job_id": null,
     "job_link": null,
@@ -976,6 +976,27 @@ const SEED_ROUNDS = [
   }
 ];
 
+
+
+// ── Date helper — keeps demo data looking recent ─────────────────────────────
+function dAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+// ── Rewrite seed dates to relative offsets ────────────────────────────────────
+function initSeedDates() {
+  [...SEED_APPS, ...SEED_TIMELINES].forEach(obj => {
+    ['date_applied','date_recruiter','date_screening','date_rejected'].forEach(k => {
+      if (obj[k]) obj[k] = dAgo(0 + Math.round((new Date("2026-05-29") - new Date(obj[k])) / 86400000));
+    });
+  });
+  SEED_ROUNDS.forEach(r => {
+    if (r.interview_date) r.interview_date = dAgo(Math.round((new Date("2026-05-29") - new Date(r.interview_date)) / 86400000));
+  });
+}
+initSeedDates();
 
 // ── Session state (survives refresh, resets on tab close) ────────────────────
 const STORAGE_KEY = "cats_demo_state";
