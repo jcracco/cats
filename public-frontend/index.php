@@ -100,6 +100,18 @@ function App() {
 
   return (
     <div className="page">
+      {/* Auth gate — on production, unauthenticated users see only the login prompt */}
+      {!window.IS_DEMO && !isAuth && authChecked && (
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"60vh", gap:16 }}>
+          <div style={{ fontSize:11, letterSpacing:5, color:"var(--eyebrow)", textTransform:"uppercase", fontWeight:600 }}>CATS</div>
+          <h2 style={{ fontSize:20, fontWeight:700, color:"var(--text-primary)" }}>Candidate Application Tracker</h2>
+          <p style={{ fontSize:13, color:"var(--text-muted)" }}>Sign in to access your pipeline.</p>
+          <button className="btn-primary" style={{ padding:"10px 28px", fontSize:13 }} onClick={()=>setShowLogin(true)}>Admin Login</button>
+        </div>
+      )}
+      {/* On production, hide everything below until authenticated */}
+      {(window.IS_DEMO || isAuth) && (<>
+
       {/* Demo banner */}
       {window.IS_DEMO && (
         <div style={{ position:"sticky", top:0, zIndex:1000, background:"#854d0e",
@@ -168,6 +180,7 @@ function App() {
         />
       )}
 
+      </>)}
       {/* Modals */}
       {showLogin && <LoginModal onSuccess={handleLogin} onClose={()=>setShowLogin(false)} hint={demoHint} />}
       {appModal  && <AppModal appId={appModal.id} isAuth={isAuth} onClose={()=>setAppModal(null)} onSaved={onAppSaved} onDeleted={onAppDeleted} defaultTab={appModal.defaultTab||"info"} />}

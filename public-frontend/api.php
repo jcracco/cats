@@ -131,6 +131,13 @@ function int_or_null(array $data, string $key): ?int {
 
 $action = $_GET['action'] ?? '';
 
+// ── Require authentication for all actions except session + login ─────────────
+// Demo domain is already blocked above — this protects production from
+// unauthenticated access to any data endpoint
+if (!in_array($action, ['session', 'login']) && !is_authenticated()) {
+    fail('Not authenticated', 401);
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 if ($action === 'login') {
     $b = body();
