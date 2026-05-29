@@ -1,0 +1,13 @@
+# Sensitive — never commit
+config.php
+session_tokens.json
+backups/
+
+# Local only
+other/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
