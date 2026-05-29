@@ -104,7 +104,7 @@ function App() {
           display:"flex", alignItems:"center", justifyContent:"space-between",
           fontSize:12, color:"#fef9c3" }}>
           <span>⚠ <strong>Demo version</strong> — all data is fictional. Changes reset when you close the tab.</span>
-          <a href="https://github.com/jeromecracco" target="_blank" rel="noreferrer"
+          <a href="https://github.com/jcracco" target="_blank" rel="noreferrer"
             style={{ color:"#fef9c3", textDecoration:"underline", textUnderlineOffset:3, opacity:0.8 }}>
             View on GitHub ↗
           </a>
