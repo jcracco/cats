@@ -55,7 +55,14 @@ function App() {
   const [showLogin, setShowLogin] = useState(false);
 
   useEffect(()=>{
-    api("session").then(d=>{ setIsAuth(!!d.auth); setChecked(true); }).catch(()=>setChecked(true));
+    if (window.IS_DEMO) {
+      // Demo mode: auto-login as demo user on page load
+      api("login","POST",{username:"demo",password:"demo"})
+        .then(()=>{ setIsAuth(true); setChecked(true); })
+        .catch(()=>{ setIsAuth(true); setChecked(true); });
+    } else {
+      api("session").then(d=>{ setIsAuth(!!d.auth); setChecked(true); }).catch(()=>setChecked(true));
+    }
   },[]);
 
   const handleLogin = () => { setIsAuth(true); setShowLogin(false); refresh(); };
@@ -156,7 +163,7 @@ function App() {
             </button>
           )}
           {isAuth
-            ? <button className="btn-link" onClick={handleLogout}>Logout</button>
+            ? (!window.IS_DEMO && <button className="btn-link" onClick={handleLogout}>Logout</button>)
             : <button className="btn-link" onClick={()=>setShowLogin(true)}>Admin Login</button>
           }
         </div>
