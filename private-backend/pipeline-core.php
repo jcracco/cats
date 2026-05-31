@@ -729,6 +729,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
         sourceFilter={sourceFilter} setSourceFilter={setSourceF} allSources={allSources}
         salaryMin={salaryMin} setSalaryMin={setSalaryMin}
         salaryType={salaryType} setSalaryType={setSalaryType}
+        grouped={grouped} setGrouped={setGrouped}
       />
       {apps !== null && (statusFilter.length||resumeFilter.length||appliedFilter.length||sourceFilter.length||search||ratingMin>0||dateFrom||dateTo||salaryMin>0) && (
         <div style={{ fontSize:11,color:"var(--text-muted)",marginBottom:8,letterSpacing:1 }}>

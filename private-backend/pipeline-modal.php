@@ -77,6 +77,7 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
   const [saving, setSaving]   = useState(false);
   const [delConf, setDelConf] = useState(false);
   const [showJD, setShowJD]   = useState(isNew);
+  const [copiedJD, setCopiedJD] = useState(false);
 
   const emptyForm = () => ({
     date_applied: localToday(),
@@ -438,10 +439,10 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
                       {form.job_description && (
                         <button className="btn-ghost" style={{ fontSize:11 }} onClick={()=>{
                           navigator.clipboard.writeText(form.job_description)
-                            .then(()=>{ const b=document.activeElement; alert("Copied to clipboard!"); })
-                            .catch(()=>{ /* fallback: select textarea */ });
+                            .then(()=>{ setCopiedJD(true); setTimeout(()=>setCopiedJD(false), 2000); })
+                            .catch(()=>{});
                         }}>
-                          ⎘ Copy JD
+                          {copiedJD ? "✓ Copied!" : "⎘ Copy JD"}
                         </button>
                       )}
                     </div>
