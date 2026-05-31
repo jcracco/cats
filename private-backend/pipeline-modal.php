@@ -410,12 +410,12 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
                   <FormField label="Job Link">
                     {editing||isNew
                       ? <input className="form-input" type="url" value={form.job_link} onChange={e=>sf("job_link",e.target.value)} />
-                      : form.job_link ? <a href={form.job_link?.match(/^https?:\/\//) ? form.job_link : "#"} target="_blank" rel="noreferrer" ...>Open ↗</a> : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>—</span>}
+                      : form.dashboard_link ? <a href={/^https?:\/\//.test(form.job_link) ? form.job_link : "#"} target="_blank" rel="noreferrer" style={{ fontSize:12,color:"#60a5fa" }}>Open ↗</a> : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>—</span>}
                   </FormField>
                   <FormField label="Dashboard Link">
                     {editing||isNew
                       ? <input className="form-input" type="url" value={form.dashboard_link} onChange={e=>sf("dashboard_link",e.target.value)} />
-                      : form.dashboard_link ? <a href={form.dashboard_link?.match(/^https?:\/\//) ? form.dashboard_link : "#"} target="_blank" rel="noreferrer" style={{ fontSize:12,color:"#60a5fa" }}>Open ↗</a> : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>—</span>}
+                      : form.dashboard_link ? <a href={/^https?:\/\//.test(form.dashboard_link) ? form.dashboard_link : "#"} target="_blank" rel="noreferrer" style={{ fontSize:12,color:"#60a5fa" }}>Open ↗</a> : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>—</span>}
                   </FormField>
                 </div>
                 {isAuth && (
