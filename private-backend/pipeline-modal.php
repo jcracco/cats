@@ -410,12 +410,12 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
                   <FormField label="Job Link">
                     {editing||isNew
                       ? <input className="form-input" type="url" value={form.job_link} onChange={e=>sf("job_link",e.target.value)} />
-                      : form.job_link ? <a href={form.job_link.toLowerCase().startsWith('javascript:') ? '#' : form.job_link} target="_blank" rel="noreferrer" style={{ fontSize:12,color:"#60a5fa" }}>Open ↗</a> : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>—</span>}
+                      : form.job_link ? <a href={form.job_link?.match(/^https?:\/\//) ? form.job_link : "#"} target="_blank" rel="noreferrer" style={{ fontSize:12,color:"#60a5fa" }}>Open ↗</a> : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>—</span>}
                   </FormField>
                   <FormField label="Dashboard Link">
                     {editing||isNew
                       ? <input className="form-input" type="url" value={form.dashboard_link} onChange={e=>sf("dashboard_link",e.target.value)} />
-                      : form.dashboard_link ? <a href={form.dashboard_link.toLowerCase().startsWith('javascript:') ? '#' : form.dashboard_link} target="_blank" rel="noreferrer" style={{ fontSize:12,color:"#60a5fa" }}>Open ↗</a> : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>—</span>}
+                      : form.dashboard_link ? <a href={form.dashboard_link?.match(/^https?:\/\//) ? form.dashboard_link : "#"} target="_blank" rel="noreferrer" style={{ fontSize:12,color:"#60a5fa" }}>Open ↗</a> : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>—</span>}
                   </FormField>
                 </div>
                 {isAuth && (
@@ -431,9 +431,20 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
                 {/* Job Description — collapsed by default, toggle to show */}
                 {isAuth && (
                   <div>
-                    <button className="btn-ghost" style={{ marginBottom:8,fontSize:11 }} onClick={()=>setShowJD(v=>!v)}>
-                      {showJD ? "▲ Hide Job Description" : "▼ Show Job Description"}
-                    </button>
+                    <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:8 }}>
+                      <button className="btn-ghost" style={{ fontSize:11 }} onClick={()=>setShowJD(v=>!v)}>
+                        {showJD ? "▲ Hide Job Description" : "▼ Show Job Description"}
+                      </button>
+                      {form.job_description && (
+                        <button className="btn-ghost" style={{ fontSize:11 }} onClick={()=>{
+                          navigator.clipboard.writeText(form.job_description)
+                            .then(()=>{ const b=document.activeElement; alert("Copied to clipboard!"); })
+                            .catch(()=>{ /* fallback: select textarea */ });
+                        }}>
+                          ⎘ Copy JD
+                        </button>
+                      )}
+                    </div>
                     {showJD && (editing||isNew
                       ? <textarea className="form-textarea" style={{ minHeight:160 }} value={form.job_description} onChange={e=>sf("job_description",e.target.value)} placeholder="Paste full job description here…" />
                       : <div style={{ fontSize:12,color:"var(--text-secondary)",lineHeight:1.7,whiteSpace:"pre-wrap",background:"var(--pill-bg)",padding:"10px 12px",borderRadius:6,maxHeight:320,overflowY:"auto" }}>{form.job_description||"No job description saved."}</div>

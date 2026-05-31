@@ -486,7 +486,7 @@ function SalarySlider({ salaryMin, setSalaryMin, salaryType, setSalaryType }) {
   );
 }
 
-function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFilter, setResumeFilter, appliedFilter, setAppliedFilter, sort, setSort, allAppliedThrough, ratingMin, setRatingMin, dateFrom, setDateFrom, dateTo, setDateTo, sourceFilter, setSourceFilter, allSources, salaryMin, setSalaryMin, salaryType, setSalaryType }) {
+function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFilter, setResumeFilter, appliedFilter, setAppliedFilter, sort, setSort, allAppliedThrough, ratingMin, setRatingMin, dateFrom, setDateFrom, dateTo, setDateTo, sourceFilter, setSourceFilter, allSources, salaryMin, setSalaryMin, salaryType, setSalaryType, grouped, setGrouped }) {
   return (
     <div className="filters">
       <div style={{ position:"relative", display:"inline-flex", alignItems:"center" }}>
@@ -510,6 +510,9 @@ function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFi
       </div>
       <SalarySlider salaryMin={salaryMin} setSalaryMin={setSalaryMin} salaryType={salaryType} setSalaryType={setSalaryType} />
       <DateRangePicker dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} />
+      <button onClick={()=>setGrouped(g=>!g)} className={`pill ${grouped?"active":""}`} title={grouped?"Switch to flat list":"Switch to grouped view"}>
+        {grouped ? "⊞ Grouped" : "≡ Flat"}
+      </button>
       <select className="sort-select" value={sort} onChange={e=>setSort(e.target.value)}>
         <option value="date_desc">Date ↓</option>
         <option value="date_asc">Date ↑</option>
@@ -520,7 +523,7 @@ function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFi
 }
 const QUICK_STATUSES = ["Not Selected","No Answer","Ghosted","Rejected","Interviewing","Applied","Withdrawn"];
 
-function AppTable({ apps, onRowClick, onStatusChange }) {
+function AppTable({ apps, onRowClick, onStatusChange, grouped=true }) {
   const [collapsed, setCollapsed]   = useState({});
   const [ctxMenu, setCtxMenu]       = useState(null); // {appId, x, y}
   const toggleGroup = g => setCollapsed(c => ({...c, [g]: !c[g]}));
@@ -536,19 +539,22 @@ function AppTable({ apps, onRowClick, onStatusChange }) {
   if (apps.length === 0) return <div className="empty-state">No applications match your filters.</div>;
 
   const GROUP_ORDER = ["active","pending","closed_pos","closed_rec","closed_no","closed_wdr"];
-  const groups = {};
-  apps.forEach(a => {
-    const g = STATUS_CONFIG[a.status]?.group || "pending";
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(a);
-  });
-
   const rows = [];
-  GROUP_ORDER.forEach(g => {
-    if (!groups[g]?.length) return;
-    rows.push({ type:"header", g, count: groups[g].length });
-    if (!collapsed[g]) groups[g].forEach(a => rows.push({ type:"row", a }));
-  });
+  if (grouped) {
+    const groups = {};
+    apps.forEach(a => {
+      const g = STATUS_CONFIG[a.status]?.group || "pending";
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(a);
+    });
+    GROUP_ORDER.forEach(g => {
+      if (!groups[g]?.length) return;
+      rows.push({ type:"header", g, count: groups[g].length });
+      if (!collapsed[g]) groups[g].forEach(a => rows.push({ type:"row", a }));
+    });
+  } else {
+    apps.forEach(a => rows.push({ type:"row", a }));
+  }
 
   const displayCompany = a => {
     const co = (a.company || "").trim();
@@ -662,6 +668,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
   const [resumeFilter, setResumeF]    = useState([]);
   const [sort, setSort]               = useState("date_desc");
   const [appliedFilter, setAppliedF]  = useState([]);
+  const [grouped, setGrouped]         = useState(true);
   const [ratingMin, setRatingMin]     = useState(0);
   const [dateFrom, setDateFrom]       = useState(null);
   const [dateTo, setDateTo]           = useState(null);
@@ -723,7 +730,12 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
         salaryMin={salaryMin} setSalaryMin={setSalaryMin}
         salaryType={salaryType} setSalaryType={setSalaryType}
       />
-      <AppTable apps={apps} onRowClick={onOpenApp} onStatusChange={isAuth ? onStatusChange : null} />
+      {apps !== null && (statusFilter.length||resumeFilter.length||appliedFilter.length||sourceFilter.length||search||ratingMin>0||dateFrom||dateTo||salaryMin>0) && (
+        <div style={{ fontSize:11,color:"var(--text-muted)",marginBottom:8,letterSpacing:1 }}>
+          Showing <strong style={{ color:"var(--text-primary)" }}>{apps.length}</strong> result{apps.length!==1?"s":""}
+        </div>
+      )}
+      <AppTable apps={apps} onRowClick={onOpenApp} onStatusChange={isAuth ? onStatusChange : null} grouped={grouped} />
     </div>
   );
 }
