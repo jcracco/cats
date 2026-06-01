@@ -523,7 +523,7 @@ function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFi
 }
 const QUICK_STATUSES = ["Not Selected","No Answer","Ghosted","Rejected","Interviewing","Applied","Withdrawn"];
 
-function AppTable({ apps, onRowClick, onStatusChange, grouped=true }) {
+function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_desc" }) {
   const [collapsed, setCollapsed]   = useState({});
   const [ctxMenu, setCtxMenu]       = useState(null); // {appId, x, y}
   const toggleGroup = g => setCollapsed(c => ({...c, [g]: !c[g]}));
@@ -553,7 +553,12 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true }) {
       if (!collapsed[g]) groups[g].forEach(a => rows.push({ type:"row", a }));
     });
   } else {
-    apps.forEach(a => rows.push({ type:"row", a }));
+    const sorted = [...apps].sort((a, b) => {
+      if (sort === "date_asc")    return (a.date_applied || "").localeCompare(b.date_applied || "");
+      if (sort === "rating_desc") return (b.rating || 0) - (a.rating || 0) || (b.date_applied || "").localeCompare(a.date_applied || "");
+      return (b.date_applied || "").localeCompare(a.date_applied || ""); // date_desc default
+    });
+    sorted.forEach(a => rows.push({ type:"row", a }));
   }
 
   const displayCompany = a => {
@@ -736,7 +741,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
           Showing <strong style={{ color:"var(--text-primary)" }}>{apps.length}</strong> result{apps.length!==1?"s":""}
         </div>
       )}
-      <AppTable apps={apps} onRowClick={onOpenApp} onStatusChange={isAuth ? onStatusChange : null} grouped={grouped} />
+      <AppTable apps={apps} onRowClick={onOpenApp} onStatusChange={isAuth ? onStatusChange : null} grouped={grouped} sort={sort} />
     </div>
   );
 }
