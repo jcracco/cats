@@ -5,3 +5,5 @@
  * bootstrap.php is gitignored and never committed.
  */
 define('PRIVATE_PATH', '/path/to/your/private-backend/');
+require_once PRIVATE_PATH . 'config.php';
+require_once PRIVATE_PATH . 'db.php';

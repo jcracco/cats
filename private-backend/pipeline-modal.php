@@ -247,6 +247,27 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
           {/* ── Application Info Tab ──────────────────────────────────────── */}
           {tab==="info" && (
             <div>
+              {editing && !isNew && (
+                <div style={{ marginBottom:18, paddingBottom:16, borderBottom:"1px solid var(--border)" }}>
+                  <div style={{ fontSize:9, color:"var(--text-muted)", letterSpacing:2, textTransform:"uppercase", marginBottom:10 }}>Status</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+                    {ALL_STATUSES.map(s => {
+                      const cfg = STATUS_CONFIG[s];
+                      const active = form.status === s;
+                      return (
+                        <button key={s} onClick={()=>sf("status",s)}
+                          className={`badge ${cfg.cls}`}
+                          style={{ cursor:"pointer", fontFamily:"inherit", opacity:active?1:0.35, boxShadow:active?"0 0 0 2px currentColor":"none", transform:active?"scale(1.05)":"scale(1)", transition:"all 0.12s" }}>
+                          {cfg.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {form.status==="Interviewing" && !hasTl && (
+                    <div style={{ fontSize:10,color:"#34d399",marginTop:8 }}>→ A timeline entry will be created automatically on save</div>
+                  )}
+                </div>
+              )}
               {(editing||isNew) && (
                 <label className="form-checkbox-label">
                   <input type="checkbox" checked={form.via_recruiting_firm} onChange={e=>sf("via_recruiting_firm",e.target.checked)} />
@@ -281,7 +302,9 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
                 <FormField label="Rating (0–100) *">
                   {editing||isNew
                     ? <input className="form-input" type="number" min={0} max={100} value={form.rating} onChange={e=>sf("rating",e.target.value)} />
-                    : <span style={{ fontSize:13,fontWeight:700,color:rc(form.rating) }}>{form.rating??'—'}</span>}
+                    : (form.rating !== '' && form.rating !== null && form.rating !== undefined
+                        ? <span style={{ display:"inline-block",fontSize:13,fontWeight:700,color:rc(form.rating),background:rb(form.rating),padding:"2px 10px",borderRadius:4 }}>{form.rating}</span>
+                        : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>—</span>)}
                 </FormField>
               </div>
 
@@ -328,7 +351,10 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
                         <input className="form-input" style={{ marginTop:6 }} value={form.source} onChange={e=>sf("source",e.target.value)} placeholder="Enter source name" autoFocus />
                       )}
                     </div>
-                  ) : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{form.source||"—"}</span>}
+                  ) : form.source ? (() => {
+                      const sc = SOURCE_COLORS[form.source];
+                      return <span className="source-pill" style={sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}}>{form.source}</span>;
+                    })() : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>—</span>}
                 </FormField>
                 <FormField label="Applied Through *">
                   {editing||isNew ? (
@@ -351,16 +377,6 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
                 </FormField>
               </div>
 
-              {editing && !isNew && (
-                <FormField label="Status">
-                  <select className="form-select" value={form.status} onChange={e=>sf("status",e.target.value)}>
-                    {ALL_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
-                  </select>
-                  {form.status==="Interviewing" && !hasTl && (
-                    <div style={{ fontSize:10,color:"#34d399",marginTop:4 }}>→ A timeline entry will be created automatically on save</div>
-                  )}
-                </FormField>
-              )}
 
               {/* Compensation */}
               <div className="modal-section">

@@ -1,11 +1,16 @@
-# Sensitive — never commit
+# CATS — gitignored files
+
+# Config and bootstrap (contain credentials and server paths)
 config.php
 bootstrap.php
+
+# Session tokens (runtime file, contains active login tokens)
 session_tokens.json
 backups/
 
 # Local only
 other/
+config.local.php
 
 # OS / Editor
 .DS_Store

@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
-require_once PRIVATE_PATH . 'config.php';
+
 $IS_DEMO = (
     isset($_SERVER['HTTP_HOST']) &&
     isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], IS_DEMO_DOMAIN) !== false
@@ -125,8 +125,8 @@ function App() {
       {/* Auth gate — on production, unauthenticated users see only the login prompt */}
       {!window.IS_DEMO && !isAuth && authChecked && (
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"60vh", gap:16 }}>
-          <div style={{ fontSize:11, letterSpacing:5, color:"var(--eyebrow)", textTransform:"uppercase", fontWeight:600 }}>CATS</div>
-          <h2 style={{ fontSize:20, fontWeight:700, color:"var(--text-primary)" }}>Candidate Application Tracker</h2>
+          <h1>CATS</h1>
+          <div class="eyebrow">Candidate Application Tracker</div>
           <p style={{ fontSize:13, color:"var(--text-muted)" }}>Sign in to access your pipeline.</p>
           <button className="btn-primary" style={{ padding:"10px 28px", fontSize:13 }} onClick={()=>setShowLogin(true)}>Admin Login</button>
         </div>

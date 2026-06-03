@@ -35,13 +35,13 @@ async function api(action, method="GET", body=null, params={}) {
 const STATUS_CONFIG = {
   "Applied":      { cls:"badge-applied",      group:"pending",   label:"Applied"      },
   "Interviewing": { cls:"badge-interviewing",  group:"active",    label:"Interviewing" },
-  "Offer":        { cls:"badge-offer",         group:"active",    label:"Offer"        },
-  "Accepted":     { cls:"badge-accepted",      group:"closed_pos",label:"Accepted"     },
-  "Rejected":     { cls:"badge-rejected",      group:"closed_rec",label:"Rejected"     },
-  "Ghosted":      { cls:"badge-ghosted",       group:"closed_rec",label:"Ghosted"      },
   "Not Selected": { cls:"badge-not-selected",  group:"closed_no", label:"Not Selected" },
   "No Answer":    { cls:"badge-no-answer",     group:"closed_no", label:"No Answer"    },
+  "Rejected":     { cls:"badge-rejected",      group:"closed_rec",label:"Rejected"     },
+  "Ghosted":      { cls:"badge-ghosted",       group:"closed_rec",label:"Ghosted"      },
   "Withdrawn":    { cls:"badge-withdrawn",     group:"closed_wdr",label:"Withdrawn"    },
+  "Offer":        { cls:"badge-offer",         group:"active",    label:"Offer"        },
+  "Accepted":     { cls:"badge-accepted",      group:"closed_pos",label:"Accepted"     },
 };
 const GROUP_LABELS = {
   active:     "Active",
@@ -521,7 +521,7 @@ function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFi
     </div>
   );
 }
-const QUICK_STATUSES = ["Not Selected","No Answer","Ghosted","Rejected","Interviewing","Applied","Withdrawn"];
+const QUICK_STATUSES = ["Applied","Interviewing","Not Selected","No Answer","Rejected","Ghosted","Withdrawn","Offer","Accepted"];
 
 function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_desc" }) {
   const [collapsed, setCollapsed]   = useState({});

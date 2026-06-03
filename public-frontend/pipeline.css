@@ -6,21 +6,21 @@
 :root {
   --bg:             #080d1a;
   --bg-page:        linear-gradient(160deg, #080d1a 0%, #0b1120 50%, #080d1a 100%);
-  --stat-bg:        rgba(255,255,255,0.03);
-  --border:         rgba(255,255,255,0.07);
+  --stat-bg:        rgba(255,255,255,0.06);
+  --border:         rgba(255,255,255,0.13);
   --tooltip-bg:     #111827;
-  --grid-line:      rgba(255,255,255,0.04);
+  --grid-line:      rgba(255,255,255,0.06);
   --text-primary:   #f1f5f9;
   --text-active:    #cbd5e1;
-  --text-secondary: #94a3b8;
-  --text-muted:     #475569;
-  --text-dim:       #374151;
-  --eyebrow:        #3b82f6;
-  --toggle-bg:      rgba(255,255,255,0.06);
-  --toggle-border:  rgba(255,255,255,0.12);
-  --toggle-color:   #94a3b8;
+  --text-secondary: #a8b8cc;
+  --text-muted:     #7a8fa8;
+  --text-dim:       #506070;
+  --eyebrow:        #60a5fa;
+  --toggle-bg:      rgba(255,255,255,0.09);
+  --toggle-border:  rgba(255,255,255,0.22);
+  --toggle-color:   #a8b8cc;
   --login-bg:       #0f172a;
-  --login-border:   #1e293b;
+  --login-border:   #2d4060;
 }
 
 /* ── CSS Variables — Light theme ─────────────────────────────────────────── */
@@ -72,7 +72,6 @@ body {
 /* Form inputs */
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }
 [data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.3); }
-input[type="number"] { -moz-appearance: textfield; }
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 
@@ -206,16 +205,16 @@ h1 {
 
 /* ── CSS Variables additions ─────────────────────────────────────────────── */
 :root {
-  --tab-active-bg:    rgba(59,130,246,0.12);
+  --tab-active-bg:    rgba(59,130,246,0.15);
   --tab-active-color: #60a5fa;
-  --tab-border:       rgba(255,255,255,0.07);
-  --table-row-hover:  rgba(255,255,255,0.03);
-  --table-row-alt:    rgba(255,255,255,0.015);
-  --input-bg:         rgba(255,255,255,0.06);
-  --input-border:     #1e293b;
+  --tab-border:       rgba(255,255,255,0.13);
+  --table-row-hover:  rgba(255,255,255,0.06);
+  --table-row-alt:    rgba(255,255,255,0.03);
+  --input-bg:         rgba(255,255,255,0.09);
+  --input-border:     #2d4060;
   --modal-bg:         #0f172a;
-  --pill-bg:          rgba(255,255,255,0.05);
-  --pill-active-bg:   rgba(59,130,246,0.15);
+  --pill-bg:          rgba(255,255,255,0.08);
+  --pill-active-bg:   rgba(59,130,246,0.18);
   --pill-active-border: #3b82f6;
 }
 [data-theme="light"] {
@@ -756,7 +755,6 @@ h1 {
 .range-handle { pointer-events: all !important; }
 
 input[type="range"] {
-  -webkit-appearance: none;
   height: 4px;
   border-radius: 2px;
   background: var(--border);
