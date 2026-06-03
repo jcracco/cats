@@ -91,18 +91,7 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
   const [form, setForm] = useState(emptyForm());
   const sf = (k,v) => setForm(f=>({...f,[k]:v}));
 
-  const STATUS_TRANSITIONS = {
-    "Applied":      ["Interviewing","Not Selected","No Answer","Withdrawn"],
-    "Interviewing": ["Rejected","Ghosted","Withdrawn","Offer"],
-    "Not Selected": ["Interviewing"],
-    "No Answer":    ["Interviewing","Not Selected"],
-    "Rejected":     ["Interviewing"],
-    "Ghosted":      ["Interviewing","Rejected"],
-    "Withdrawn":    ["Interviewing"],
-    "Offer":        ["Withdrawn","Accepted"],
-    "Accepted":     [],
-  };
-  const STATUS_TO_TL = {
+const STATUS_TO_TL = {
     "Applied":"pending", "Interviewing":"pending", "Offer":"pending",
     "Accepted":"rejected", "Not Selected":"rejected", "No Answer":"rejected",
     "Rejected":"rejected", "Withdrawn":"rejected", "Ghosted":"ghosted",

@@ -60,6 +60,17 @@ const GROUP_COLORS = {
   closed_wdr: "#94a3b8",
 };
 const ALL_STATUSES = Object.keys(STATUS_CONFIG);
+const STATUS_TRANSITIONS = {
+  "Applied":      ["Interviewing","Not Selected","No Answer","Withdrawn"],
+  "Interviewing": ["Rejected","Ghosted","Withdrawn","Offer"],
+  "Not Selected": ["Interviewing"],
+  "No Answer":    ["Interviewing","Not Selected"],
+  "Rejected":     ["Interviewing"],
+  "Ghosted":      ["Interviewing","Rejected"],
+  "Withdrawn":    ["Interviewing"],
+  "Offer":        ["Withdrawn","Accepted"],
+  "Accepted":     [],
+};
 const RESUME_VERSIONS = ["TPM","SPO","TIM","Custom"];
 const STATUS_DOT_COLORS = {
   "Applied":      "#94a3b8",
@@ -111,7 +122,7 @@ function StatBox({ label, value, editable, onChange, pct, pctLabel }) {
           : <span className="stat-card-value">{value}</span>}
         {pct && <span className="stat-card-pct">{pct}%</span>}
       </div>
-      {pctLabel && <div className="stat-card-sub">{pctLabel}</div>}
+      <div className="stat-card-sub">{pctLabel || " "}</div>
     </div>
   );
 }
@@ -170,7 +181,7 @@ function buildStats(sorted) {
 // ── Timeline: Legend ──────────────────────────────────────────────────────────
 function Legend({ showEditHint=false }) {
   return (
-    <div style={{ display:"flex", gap:18, marginBottom:24, flexWrap:"wrap", padding:"9px 14px", background:"var(--stat-bg)", border:"1px solid var(--border)", borderRadius:8, width:"fit-content" }}>
+    <div style={{ display:"flex", gap:18, flexWrap:"wrap", padding:"9px 14px", background:"var(--stat-bg)", border:"1px solid var(--border)", borderRadius:8, width:"fit-content" }}>
       {[["Applied",COLORS.applied],["Recruiter",COLORS.recruiter],["Screening",COLORS.screening],["Interview Round",COLORS.round],["Rejected",COLORS.rejected],["Ghosted",COLORS.ghosted]].map(([l,c])=>(
         <div key={l} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11 }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:c, boxShadow:`0 0 5px ${c}80` }} />
@@ -179,7 +190,8 @@ function Legend({ showEditHint=false }) {
       ))}
       <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11 }}>
         <div style={{ width:18, height:2, background:"repeating-linear-gradient(90deg,rgba(239,68,68,0.5) 0,rgba(239,68,68,0.5) 4px,transparent 4px,transparent 8px)" }} />
-        <span style={{ color:"var(--text-secondary)" }}>Gap{showEditHint?" · click any row to edit":""}</span>
+        <span style={{ color:"var(--text-secondary)" }}>Gap</span>
+        {showEditHint && <span style={{ color:"var(--text-dim)", fontSize:10, borderLeft:"1px solid var(--border)", paddingLeft:10, marginLeft:4 }}>click any row to edit</span>}
       </div>
     </div>
   );
@@ -312,22 +324,30 @@ function PipelineGrid({ sorted, hovered, setHov, tipPos, setTipPos, zones, toX, 
 }
 
 // ── Timeline: StatsRow ────────────────────────────────────────────────────────
-function TimelineStatsRow({ sorted, zones }) {
+function TimelineStatsRow({ sorted, zones, totalApps }) {
   const { withI, ghost, r2nd, totalIntvw, avgR, avgS, maxR, maxRC, shortest, longest, reachedFinal } = buildStats(sorted);
+  const screenings = sorted.length;
   return (
-    <div className="stats-bar" style={{ marginTop:28 }}>
-      <StatBox label="Screenings"         value={sorted.length} />
-      <StatBox label="Total Interviews"   value={totalIntvw} />
-      <StatBox label="Reached Interviews" value={withI} pct={sorted.length?((withI/sorted.length)*100).toFixed(0):null} pctLabel="of screenings" />
-      <StatBox label="Reached 2nd Round"  value={r2nd} pct={withI?((r2nd/withI)*100).toFixed(0):null} pctLabel="of interviews" />
-      <StatBox label="Ghosted"            value={ghost} />
-      <StatBox label="Avg → Recruiter"    value={`${avgR}d`} />
-      <StatBox label="Avg → Screening"    value={`${avgS}d`} />
-      <StatBox label="Pipeline Gaps"      value={zones.length} />
-      <StatBox label="Most Rounds"        value={`${maxRC} ×${maxR}`} />
-      {shortest && <StatBox label="Shortest Process" value={`${shortest.days}d`} pctLabel={shortest.company} />}
-      {longest  && <StatBox label="Longest Process"  value={`${longest.days}d`}  pctLabel={longest.company} />}
-      <StatBox label="Reached Final Round" value={reachedFinal} pct={withI?((reachedFinal/withI)*100).toFixed(0):null} pctLabel="of interviewed" />
+    <div className="stats-bar">
+      <StatGroup label="Pipeline Funnel">
+        <StatBox label="Total Applications"    value={totalApps ?? "…"} />
+        <StatBox label="Screenings"            value={screenings} pct={totalApps?((screenings/totalApps)*100).toFixed(1):null} pctLabel="of applications" />
+        <StatBox label="Reached Hiring Manager" value={withI}    pct={screenings?((withI/screenings)*100).toFixed(0):null}    pctLabel="of screenings" />
+        <StatBox label="Passed 1st Round"      value={r2nd}      pct={withI?((r2nd/withI)*100).toFixed(0):null}              pctLabel="of HM interviews" />
+        <StatBox label="Reached Final Round"   value={reachedFinal} pct={withI?((reachedFinal/withI)*100).toFixed(0):null}   pctLabel="of HM interviews" />
+      </StatGroup>
+      <StatGroup label="Process Time">
+        <StatBox label="Avg → Recruiter"  value={`${avgR}d`} />
+        <StatBox label="Avg → Screening"  value={`${avgS}d`} />
+        {longest  && <StatBox label="Longest Process"  value={`${longest.days}d`} pctLabel={longest.company} />}
+        {shortest && <StatBox label="Shortest Process" value={`${shortest.days}d`} pctLabel={shortest.company} />}
+      </StatGroup>
+      <StatGroup label="Interview Activity">
+        <StatBox label="Total Interviews" value={totalIntvw} />
+        <StatBox label="Pipeline Gaps"    value={zones.length} />
+        <StatBox label="Ghosted"          value={ghost} />
+        <StatBox label="Most Rounds"      value={`${maxRC} ×${maxR}`} />
+      </StatGroup>
     </div>
   );
 }
@@ -521,7 +541,6 @@ function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFi
     </div>
   );
 }
-const QUICK_STATUSES = ["Applied","Interviewing","Not Selected","No Answer","Rejected","Ghosted","Withdrawn","Offer","Accepted"];
 
 function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_desc" }) {
   const [collapsed, setCollapsed]   = useState({});
@@ -616,7 +635,7 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
             );
             const a = r.a;
             return (
-              <tr key={a.id} onClick={()=>onRowClick&&onRowClick(a)} onContextMenu={e=>{e.preventDefault();setCtxMenu({appId:a.id,x:e.clientX,y:e.clientY});}}>
+              <tr key={a.id} onClick={()=>onRowClick&&onRowClick(a)} onContextMenu={e=>{e.preventDefault();setCtxMenu({appId:a.id,status:a.status,x:e.clientX,y:e.clientY});}}>
                 <td className="col-date">{a.date_applied}</td>
                 <td className="col-company" title={displayCompany(a)}>{displayCompany(a)}{displayFirmDot(a)}</td>
                 <td className="col-title"  title={a.job_title}>{a.job_title}</td>
@@ -644,8 +663,13 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
           border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:900,
           boxShadow:"0 8px 24px rgba(0,0,0,0.4)", minWidth:160 }}
         onClick={e=>e.stopPropagation()}>
-        <div style={{ fontSize:9,color:"var(--text-dim)",letterSpacing:2,textTransform:"uppercase",padding:"6px 14px 4px" }}>Set Status</div>
-        {QUICK_STATUSES.map(s=>(
+        <div style={{ display:"flex",alignItems:"center",gap:7,padding:"6px 14px 8px",borderBottom:"1px solid var(--border)" }}>
+          <span style={{ width:7,height:7,borderRadius:"50%",background:STATUS_DOT_COLORS[ctxMenu.status],flexShrink:0,display:"inline-block" }} />
+          <span style={{ fontSize:11,color:"var(--text-primary)",fontWeight:600 }}>{ctxMenu.status}</span>
+        </div>
+        {(STATUS_TRANSITIONS[ctxMenu.status]||[]).length === 0
+          ? <div style={{ fontSize:11,color:"var(--text-dim)",padding:"8px 14px" }}>No transitions available</div>
+          : (STATUS_TRANSITIONS[ctxMenu.status]||[]).map(s=>(
           <button key={s}
             onClick={()=>{ onStatusChange&&onStatusChange(ctxMenu.appId, s); setCtxMenu(null); }}
             style={{ display:"flex", alignItems:"center", gap:8, width:"100%", background:"none",
@@ -748,15 +772,19 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
 
 // ── Timeline Tab ──────────────────────────────────────────────────────────────
 function TimelineTab({ isAuth, onRowClick, onLinkClick, refreshKey }) {
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [hovered, setHov]     = useState(null);
-  const [tipPos, setTipPos]   = useState({x:0,y:0});
+  const [entries, setEntries]   = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [hovered, setHov]       = useState(null);
+  const [tipPos, setTipPos]     = useState({x:0,y:0});
+  const [totalApps, setTotalApps] = useState(null);
+
+  useEffect(() => {
+    api("stats").then(s => setTotalApps(s?.total ?? null)).catch(()=>{});
+  }, [refreshKey]);
 
   useEffect(() => {
     setLoading(true);
     api("timeline").then(data => {
-      // Normalize to shape expected by existing timeline components
       const normalized = (data||[]).map(e => ({
         id:        e.id,
         company:   (e.company && e.company.trim()) ? e.company : (e.recruiting_firm || ""),
@@ -783,17 +811,16 @@ function TimelineTab({ isAuth, onRowClick, onLinkClick, refreshKey }) {
   const { toX, monthLabels, zones } = buildTimelineData(sorted);
   const hoveredItem = sorted.find(i=>i.id===hovered)||null;
   const todayStr = TODAY.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
-  const { totalIntvw } = buildStats(sorted);
 
   return (
     <div>
-      <div style={{ fontSize:11, color:"var(--text-muted)", marginBottom:16 }}>
-        {sorted.length} screenings · {totalIntvw} total interviews · {todayStr}
-      </div>
-      <Legend showEditHint={isAuth} />
+      <TimelineStatsRow sorted={sorted} zones={zones} totalApps={totalApps} />
       <PipelineGrid sorted={sorted} hovered={hovered} setHov={setHov} tipPos={tipPos} setTipPos={setTipPos} zones={zones} toX={toX} monthLabels={monthLabels} onRowClick={isAuth?onRowClick:null} onLinkClick={onLinkClick} />
       {hoveredItem && <TimelineTooltip item={hoveredItem} tipPos={tipPos} />}
-      <TimelineStatsRow sorted={sorted} zones={zones} />
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, marginTop:20 }}>
+        <Legend showEditHint={isAuth} />
+        <div style={{ fontSize:11, color:"var(--text-dim)", whiteSpace:"nowrap", paddingTop:10 }}>{todayStr}</div>
+      </div>
     </div>
   );
 }
