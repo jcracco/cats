@@ -91,6 +91,40 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
   const [form, setForm] = useState(emptyForm());
   const sf = (k,v) => setForm(f=>({...f,[k]:v}));
 
+  const STATUS_TRANSITIONS = {
+    "Applied":      ["Interviewing","Not Selected","No Answer","Withdrawn"],
+    "Interviewing": ["Rejected","Ghosted","Withdrawn","Offer"],
+    "Not Selected": ["Interviewing"],
+    "No Answer":    ["Interviewing","Not Selected"],
+    "Rejected":     ["Interviewing"],
+    "Ghosted":      ["Interviewing","Rejected"],
+    "Withdrawn":    ["Interviewing"],
+    "Offer":        ["Withdrawn","Accepted"],
+    "Accepted":     [],
+  };
+  const STATUS_TO_TL = {
+    "Applied":"pending", "Interviewing":"pending", "Offer":"pending",
+    "Accepted":"rejected", "Not Selected":"rejected", "No Answer":"rejected",
+    "Rejected":"rejected", "Withdrawn":"rejected", "Ghosted":"ghosted",
+  };
+  const TL_TO_STATUS = { "pending":"Interviewing", "ghosted":"Ghosted", "rejected":"Rejected" };
+
+  const setStatus = s => {
+    sf("status", s);
+    if (timelineId) {
+      const newTl = STATUS_TO_TL[s] || "pending";
+      setTlStatus(newTl);
+      if (newTl === "rejected") { if (!rejDate) setRejDate(localToday()); }
+      else setRejDate("");
+    }
+  };
+  const setTlStatusSync = k => {
+    setTlStatus(k);
+    if (k === "rejected") { if (!rejDate) setRejDate(localToday()); }
+    else setRejDate("");
+    if (!["Offer","Accepted"].includes(form.status)) sf("status", TL_TO_STATUS[k]);
+  };
+
   // Timeline state
   const [stages, setStages]     = useState([]);
   const [timelineId, setTlId]   = useState(null);
@@ -235,6 +269,28 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
           </div>
         </div>
 
+        {/* Status picker — fixed, above tabs, edit mode only */}
+        {editing && !isNew && (
+          <div style={{ padding:"0 28px 14px", borderBottom:"1px solid var(--border)" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:7, alignItems:"center" }}>
+              {[form.status, ...(STATUS_TRANSITIONS[form.status]||[])].map(s => {
+                const cfg = STATUS_CONFIG[s];
+                const active = form.status === s;
+                return (
+                  <button key={s} onClick={()=>{ if(!active) setStatus(s); }}
+                    className={`badge ${cfg.cls}`}
+                    style={{ cursor:active?"default":"pointer", fontFamily:"inherit", opacity:active?1:0.55, boxShadow:active?"0 0 0 2px currentColor":"none", transform:active?"scale(1.05)":"scale(1)", transition:"all 0.12s" }}>
+                    {cfg.label}
+                  </button>
+                );
+              })}
+            </div>
+            {form.status==="Interviewing" && !hasTl && (
+              <div style={{ fontSize:10,color:"#34d399",marginTop:8 }}>→ A timeline entry will be created automatically on save</div>
+            )}
+          </div>
+        )}
+
         {/* Tabs — fixed */}
         <div className="modal-tabs">
           <button className={`modal-tab-btn ${tab==="info"?"active":""}`} onClick={()=>setTab("info")}>Application Info</button>
@@ -247,27 +303,6 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
           {/* ── Application Info Tab ──────────────────────────────────────── */}
           {tab==="info" && (
             <div>
-              {editing && !isNew && (
-                <div style={{ marginBottom:18, paddingBottom:16, borderBottom:"1px solid var(--border)" }}>
-                  <div style={{ fontSize:9, color:"var(--text-muted)", letterSpacing:2, textTransform:"uppercase", marginBottom:10 }}>Status</div>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
-                    {ALL_STATUSES.map(s => {
-                      const cfg = STATUS_CONFIG[s];
-                      const active = form.status === s;
-                      return (
-                        <button key={s} onClick={()=>sf("status",s)}
-                          className={`badge ${cfg.cls}`}
-                          style={{ cursor:"pointer", fontFamily:"inherit", opacity:active?1:0.35, boxShadow:active?"0 0 0 2px currentColor":"none", transform:active?"scale(1.05)":"scale(1)", transition:"all 0.12s" }}>
-                          {cfg.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {form.status==="Interviewing" && !hasTl && (
-                    <div style={{ fontSize:10,color:"#34d399",marginTop:8 }}>→ A timeline entry will be created automatically on save</div>
-                  )}
-                </div>
-              )}
               {(editing||isNew) && (
                 <label className="form-checkbox-label">
                   <input type="checkbox" checked={form.via_recruiting_firm} onChange={e=>sf("via_recruiting_firm",e.target.checked)} />
@@ -582,7 +617,7 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
                           ["rejected", "✕ Closed",  "#f87171"],
                         ].map(([k,l,c])=>(
                           <button key={k}
-                            onClick={()=>{ if(isAuth) setTlStatus(k); }}
+                            onClick={()=>{ if(isAuth&&editing) setTlStatusSync(k); }}
                             style={{ padding:"6px 14px",borderRadius:6,fontSize:11,cursor:editing?"pointer":"default",fontFamily:"inherit",
                               border:`1px solid ${tlStatus===k?c:"var(--border)"}`,
                               background:tlStatus===k?`${c}20`:"transparent",

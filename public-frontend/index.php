@@ -41,6 +41,14 @@ $IS_DEMO = (
 <?php endif; ?>
 </head>
 <body>
+
+<?php if ($IS_DEMO): ?>
+<div class="demo-banner">
+    <span>⚠ <strong>Demo version</strong> — all data is fictional. Changes reset when you close the tab.</span>
+    <a href="https://github.com/jcracco/" target="_blank" rel="noreferrer" class="demo-banner-link">View on GitHub ↗</a>
+</div>
+<?php endif; ?>
+
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
@@ -134,19 +142,6 @@ function App() {
       {/* On production, hide everything below until authenticated */}
       {(window.IS_DEMO || isAuth) && (<>
 
-      {/* Demo banner */}
-      {window.IS_DEMO && (
-        <div style={{ position:"sticky", top:0, zIndex:1000, background:"#854d0e",
-          borderBottom:"1px solid #a16207", padding:"8px 20px",
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          fontSize:12, color:"#fef9c3" }}>
-          <span>⚠ <strong>Demo version</strong> — all data is fictional. Changes reset when you close the tab.</span>
-          <a href="https://github.com/jcracco" target="_blank" rel="noreferrer"
-            style={{ color:"#fef9c3", textDecoration:"underline", textUnderlineOffset:3, opacity:0.8 }}>
-            View on GitHub ↗
-          </a>
-        </div>
-      )}
       {/* Top bar */}
       <div className="top-bar">
         <div className="top-bar-left">
