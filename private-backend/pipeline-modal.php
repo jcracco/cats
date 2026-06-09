@@ -332,31 +332,6 @@ const STATUS_TO_TL = {
                 </FormField>
               </div>
 
-              <FormField label="Location *">
-                {editing||isNew ? (
-                  <div>
-                    <div className="form-radio-group" style={{ marginBottom:8 }}>
-                      {["Remote","Hybrid"].map(v=>(
-                        <label key={v} className="form-radio-label">
-                          <input type="radio" checked={form.location_type===v} onChange={()=>sf("location_type",v)} /> {v}
-                        </label>
-                      ))}
-                    </div>
-                    {form.location_type==="Hybrid" && (
-                      <div className="form-row">
-                        <input className="form-input" placeholder="Location" value={form.hybrid_location} onChange={e=>sf("hybrid_location",e.target.value)} />
-                        <input className="form-input" placeholder="Days onsite (optional)" value={form.days_onsite} onChange={e=>sf("days_onsite",e.target.value)} />
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <span style={{ fontSize:13,color:"var(--text-secondary)" }}>
-                    {form.location_type}{form.hybrid_location?` — ${form.hybrid_location}`:""}
-                    {form.days_onsite?` (${form.days_onsite} days)`:""}
-                  </span>
-                )}
-              </FormField>
-
               <div className="form-row">
                 <FormField label="Source *">
                   {editing||isNew ? (
@@ -400,6 +375,31 @@ const STATUS_TO_TL = {
                   ) : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{form.applied_through||"—"}</span>}
                 </FormField>
               </div>
+
+              <FormField label="Location *">
+                {editing||isNew ? (
+                  <div>
+                    <div className="form-radio-group" style={{ marginBottom:8 }}>
+                      {["Remote","Hybrid"].map(v=>(
+                        <label key={v} className="form-radio-label">
+                          <input type="radio" checked={form.location_type===v} onChange={()=>sf("location_type",v)} /> {v}
+                        </label>
+                      ))}
+                    </div>
+                    {form.location_type==="Hybrid" && (
+                      <div className="form-row">
+                        <input className="form-input" placeholder="Location" value={form.hybrid_location} onChange={e=>sf("hybrid_location",e.target.value)} />
+                        <input className="form-input" placeholder="Days onsite (optional)" value={form.days_onsite} onChange={e=>sf("days_onsite",e.target.value)} />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <span style={{ fontSize:13,color:"var(--text-secondary)" }}>
+                    {form.location_type}{form.hybrid_location?` — ${form.hybrid_location}`:""}
+                    {form.days_onsite?` (${form.days_onsite} days)`:""}
+                  </span>
+                )}
+              </FormField>
 
 
               {/* Compensation */}
@@ -494,12 +494,6 @@ const STATUS_TO_TL = {
                 )}
               </div>
 
-              {(editing||isNew) && (
-                <div className="modal-actions">
-                  <button className="btn-primary" style={{ flex:1,padding:"10px 0",fontSize:13 }} onClick={save} disabled={saving}>{saving?"Saving…":(isNew?"Add Application":"Save Changes")}</button>
-                  {!isNew && <button className="btn-secondary" onClick={()=>setEditing(false)}>Cancel</button>}
-                </div>
-              )}
             </div>
           )}
 
@@ -632,17 +626,21 @@ const STATUS_TO_TL = {
                     </div>
                   )}
 
-                  {isAuth && editing && (
-                    <div className="modal-actions">
-                      <button className="btn-primary" style={{ flex:1,padding:"10px 0",fontSize:13 }} onClick={save} disabled={saving}>{saving?"Saving…":"Save Changes"}</button>
-                      <button className="btn-secondary" onClick={()=>setEditing(false)}>Cancel</button>
-                    </div>
-                  )}
                 </>
               )}
             </div>
           )}
         </div>{/* end modal-body */}
+
+        {/* Sticky footer — save/cancel, visible in edit mode regardless of active tab */}
+        {(editing || isNew) && (
+          <div className="modal-footer">
+            <button className="btn-primary" style={{ flex:1, padding:"10px 0", fontSize:13 }} onClick={save} disabled={saving}>
+              {saving ? "Saving…" : (isNew ? "Add Application" : "Save Changes")}
+            </button>
+            {!isNew && <button className="btn-secondary" onClick={()=>setEditing(false)}>Cancel</button>}
+          </div>
+        )}
       </div>
 
       {delConf && <DeleteConfirm label="application" onConfirm={doDelete} onCancel={()=>setDelConf(false)} />}
@@ -701,47 +699,49 @@ function TimelineModal({ entryId, isNew, onClose, onSaved, onDeleted }) {
     <>
       <div className="modal-backdrop" onClick={onClose} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:500 }} />
       <div className="app-modal">
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+        <div className="modal-header" style={{ flexShrink:0 }}>
           <h2 style={{ fontSize:16,fontWeight:700,color:"var(--text-primary)" }}>{isNew?"Add Timeline Entry":"Edit Timeline Entry"}</h2>
           <div style={{ display:"flex",gap:8 }}>
             {!isNew && <button className="btn-danger" style={{ fontSize:11,padding:"5px 10px",letterSpacing:0.5 }} onClick={()=>setDelConf(true)}>Delete</button>}
             <button onClick={onClose} style={{ background:"none",border:"none",color:"var(--text-muted)",fontSize:20,cursor:"pointer",lineHeight:1,padding:"0 4px" }}>✕</button>
           </div>
         </div>
-        <div style={{ fontSize:11,color:"var(--text-muted)",marginBottom:12 }}>Company, position, rating and date are managed in the Application Info tab.</div>
-        <div className="form-row">
-          <FormField label="Recruiter Contact"><input className="form-input" type="date" value={form.date_recruiter} onChange={e=>sf("date_recruiter",e.target.value)} /></FormField>
-          <FormField label="Screening Date"><input className="form-input" type="date" value={form.date_screening} onChange={e=>sf("date_screening",e.target.value)} /></FormField>
-        </div>
-        <div className="modal-section">
-          <div className="modal-section-title">Status</div>
-          <div style={{ display:"flex",gap:10,marginBottom:12 }}>
-            {[["pending","Active"],["closed","Closed"]].map(([k,l])=>(
-              <button key={k} className={`pill ${(k==="pending"?form.pending:!form.pending)?"active":""}`} onClick={()=>sf("pending",k==="pending")}>{l}</button>
-            ))}
+        <div className="modal-body">
+          <div style={{ fontSize:11,color:"var(--text-muted)",marginBottom:12 }}>Company, position, rating and date are managed in the Application Info tab.</div>
+          <div className="form-row">
+            <FormField label="Recruiter Contact"><input className="form-input" type="date" value={form.date_recruiter} onChange={e=>sf("date_recruiter",e.target.value)} /></FormField>
+            <FormField label="Screening Date"><input className="form-input" type="date" value={form.date_screening} onChange={e=>sf("date_screening",e.target.value)} /></FormField>
           </div>
-          {!form.pending && <FormField label="Rejection Date"><input className="form-input" type="date" value={form.date_rejected} onChange={e=>sf("date_rejected",e.target.value)} /></FormField>}
-        </div>
-        <div className="modal-section">
-          <div className="modal-section-title">Interview Rounds</div>
-          {rounds.map((r,i)=>(
-            <div key={i} className="stage-row">
-              <div className="stage-label">Round {i+1}</div>
-              <div className="form-row">
-                <FormField label="Date"><input className="form-input" type="date" value={r.interview_date} onChange={e=>ur(i,"interview_date",e.target.value)} /></FormField>
-                <FormField label="Type">
-                  <select className="form-select" value={r.interview_type} onChange={e=>ur(i,"interview_type",e.target.value)}>
-                    <option value="">—</option>
-                    {INTERVIEW_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
-                  </select>
-                </FormField>
-              </div>
-              <FormField label="Interviewer(s)"><input className="form-input" value={r.interviewer} onChange={e=>ur(i,"interviewer",e.target.value)} /></FormField>
+          <div className="modal-section">
+            <div className="modal-section-title">Status</div>
+            <div style={{ display:"flex",gap:10,marginBottom:12 }}>
+              {[["pending","Active"],["closed","Closed"]].map(([k,l])=>(
+                <button key={k} className={`pill ${(k==="pending"?form.pending:!form.pending)?"active":""}`} onClick={()=>sf("pending",k==="pending")}>{l}</button>
+              ))}
             </div>
-          ))}
-          <button className="btn-ghost" onClick={()=>setRounds(r=>[...r,{interview_date:"",interview_type:"",interviewer:"",notes:""}])}>+ Add Round</button>
+            {!form.pending && <FormField label="Rejection Date"><input className="form-input" type="date" value={form.date_rejected} onChange={e=>sf("date_rejected",e.target.value)} /></FormField>}
+          </div>
+          <div className="modal-section">
+            <div className="modal-section-title">Interview Rounds</div>
+            {rounds.map((r,i)=>(
+              <div key={i} className="stage-row">
+                <div className="stage-label">Round {i+1}</div>
+                <div className="form-row">
+                  <FormField label="Date"><input className="form-input" type="date" value={r.interview_date} onChange={e=>ur(i,"interview_date",e.target.value)} /></FormField>
+                  <FormField label="Type">
+                    <select className="form-select" value={r.interview_type} onChange={e=>ur(i,"interview_type",e.target.value)}>
+                      <option value="">—</option>
+                      {INTERVIEW_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </FormField>
+                </div>
+                <FormField label="Interviewer(s)"><input className="form-input" value={r.interviewer} onChange={e=>ur(i,"interviewer",e.target.value)} /></FormField>
+              </div>
+            ))}
+            <button className="btn-ghost" onClick={()=>setRounds(r=>[...r,{interview_date:"",interview_type:"",interviewer:"",notes:""}])}>+ Add Round</button>
+          </div>
         </div>
-        <div className="modal-actions">
+        <div className="modal-footer">
           <button className="btn-primary" style={{ flex:1,padding:"10px 0",fontSize:13 }} onClick={save} disabled={saving}>{saving?"Saving…":(isNew?"Add Entry":"Save Changes")}</button>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
         </div>

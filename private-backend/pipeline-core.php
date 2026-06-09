@@ -542,7 +542,7 @@ function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFi
   );
 }
 
-function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_desc" }) {
+function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_desc", hasFilters=false }) {
   const [collapsed, setCollapsed]   = useState({});
   const [ctxMenu, setCtxMenu]       = useState(null); // {appId, x, y}
   const toggleGroup = g => setCollapsed(c => ({...c, [g]: !c[g]}));
@@ -555,7 +555,7 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
   }, []);
 
   if (!apps) return <div className="empty-state">Loading…</div>;
-  if (apps.length === 0) return <div className="empty-state">No applications match your filters.</div>;
+  if (apps.length === 0) return <div className="empty-state">{hasFilters ? "No applications match your filters." : "No applications yet. Click + Add to get started."}</div>;
 
   const GROUP_ORDER = ["active","pending","closed_pos","closed_rec","closed_no","closed_wdr"];
   const rows = [];
@@ -765,7 +765,8 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
           Showing <strong style={{ color:"var(--text-primary)" }}>{apps.length}</strong> result{apps.length!==1?"s":""}
         </div>
       )}
-      <AppTable apps={apps} onRowClick={onOpenApp} onStatusChange={isAuth ? onStatusChange : null} grouped={grouped} sort={sort} />
+      <AppTable apps={apps} onRowClick={onOpenApp} onStatusChange={isAuth ? onStatusChange : null} grouped={grouped} sort={sort}
+        hasFilters={!!(search || statusFilter.length || resumeFilter.length || appliedFilter.length || sourceFilter.length || ratingMin > 0 || dateFrom || dateTo || salaryMin > 0)} />
     </div>
   );
 }

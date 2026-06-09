@@ -53,6 +53,37 @@ $IS_DEMO = (
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
+// ── Icon primitives ───────────────────────────────────────────────────────────
+function LucideIcon({ size = 24, children }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round"
+         style={{display:'inline-block',verticalAlign:'middle'}}>
+      {children}
+    </svg>
+  );
+}
+const LogOut   = ({ size = 24 }) => <LucideIcon size={size}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></LucideIcon>;
+const Settings = ({ size = 24 }) => <LucideIcon size={size}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></LucideIcon>;
+const Sun      = ({ size = 24 }) => <LucideIcon size={size}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></LucideIcon>;
+const Moon     = ({ size = 24 }) => <LucideIcon size={size}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></LucideIcon>;
+
+// ── ThemeToggle (fixed bottom-right) ──────────────────────────────────────────
+function ThemeToggle({ theme, onToggle }) {
+  const Icon = theme === 'dark' ? Sun : Moon;
+  return (
+    <button onClick={onToggle} title="Toggle theme"
+      style={{ position:'fixed', bottom:24, right:24, zIndex:500,
+        background:'var(--bg2)', border:'1px solid var(--border)',
+        borderRadius:'50%', width:36, height:36, cursor:'pointer',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        color:'var(--text-muted)', transition:'all 0.15s' }}>
+      <Icon size={16} />
+    </button>
+  );
+}
+
 <?php include PRIVATE_PATH . 'pipeline-core.php'; ?>
 <?php include PRIVATE_PATH . 'pipeline-modal.php'; ?>
 
@@ -149,16 +180,26 @@ function App() {
           <h1>CATS</h1>
         </div>
         <div className="top-bar-right">
-          <button className="theme-toggle" onClick={toggleTheme}>
-            {theme==="dark"?"☀ Light":"● Dark"}
-          </button>
           {isAuth && (
             <button className="btn-primary" onClick={()=>{ if(tab==="applications") openApp(null); else openTl(null); }}>
               + Add
             </button>
           )}
+          <button title={theme==="dark"?"Switch to light mode":"Switch to dark mode"} onClick={toggleTheme}
+            style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", padding:"5px 6px", display:"flex", alignItems:"center", borderRadius:6, transition:"color 0.12s" }}
+            onMouseEnter={e=>e.currentTarget.style.color="var(--text-secondary)"}
+            onMouseLeave={e=>e.currentTarget.style.color="var(--text-muted)"}>
+            {theme==="dark" ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
           {isAuth
-            ? (!window.IS_DEMO && <button className="btn-link" onClick={handleLogout}>Logout</button>)
+            ? (!window.IS_DEMO && (
+                <button title="Sign out" onClick={handleLogout}
+                  style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", padding:"5px 6px", display:"flex", alignItems:"center", borderRadius:6, transition:"color 0.12s" }}
+                  onMouseEnter={e=>e.currentTarget.style.color="var(--text-secondary)"}
+                  onMouseLeave={e=>e.currentTarget.style.color="var(--text-muted)"}>
+                  <LogOut size={15} />
+                </button>
+              ))
             : <button className="btn-link" onClick={()=>setShowLogin(true)}>Admin Login</button>
           }
         </div>
