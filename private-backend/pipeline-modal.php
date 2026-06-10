@@ -103,23 +103,35 @@ const STATUS_TO_TL = {
     if (timelineId) {
       const newTl = STATUS_TO_TL[s] || "pending";
       setTlStatus(newTl);
-      if (newTl === "rejected") { if (!rejDate) setRejDate(localToday()); }
-      else setRejDate("");
+      if (newTl === "rejected") { if (!closedDate) setClosedDate(localToday()); }
+      else setClosedDate("");
     }
+    if (s === "Offer" && !offerDate) { setOfferDate(localToday()); setShowOffer(true); }
   };
-  const setTlStatusSync = k => {
-    setTlStatus(k);
-    if (k === "rejected") { if (!rejDate) setRejDate(localToday()); }
-    else setRejDate("");
-    if (!["Offer","Accepted"].includes(form.status)) sf("status", TL_TO_STATUS[k]);
+  // outcome: "pending" | "Ghosted" | "Rejected" | "Withdrawn" | "Accepted"
+  const setTlStatusSync = outcome => {
+    if (outcome === "Ghosted") {
+      setTlStatus("ghosted"); setClosedDate("");
+      sf("status", "Ghosted");
+    } else if (outcome === "pending") {
+      setTlStatus("pending"); setClosedDate("");
+      if (!["Offer","Accepted"].includes(form.status)) sf("status", "Interviewing");
+    } else {
+      setTlStatus("rejected");
+      if (!closedDate) setClosedDate(localToday());
+      sf("status", outcome);
+    }
   };
 
   // Timeline state
   const [stages, setStages]     = useState([]);
   const [timelineId, setTlId]   = useState(null);
   // Timeline close/reopen/ghosted state — stored on the timeline entry
-  const [tlStatus, setTlStatus] = useState("pending"); // "pending" | "rejected" | "ghosted"
-  const [rejDate, setRejDate]   = useState("");
+  const [tlStatus, setTlStatus]     = useState("pending"); // "pending" | "rejected" | "ghosted"
+  const [closedDate, setClosedDate] = useState("");
+  const [offerDate, setOfferDate]   = useState("");
+  const [offerNotes, setOfferNotes] = useState("");
+  const [showOffer, setShowOffer]   = useState(false);
 
   useEffect(()=>{
     if (isNew) return;
@@ -143,9 +155,11 @@ const STATUS_TO_TL = {
         const t = d.timeline;
         setTlId(t.id);
         // Determine timeline status
-        if (t.date_rejected) { setTlStatus("rejected"); setRejDate(t.date_rejected); }
+        if (t.date_closed) { setTlStatus("rejected"); setClosedDate(t.date_closed); }
         else if (!t.pending) { setTlStatus("ghosted"); }
         else                 { setTlStatus("pending"); }
+        if (t.offer_date)  { setOfferDate(t.offer_date); setShowOffer(true); }
+        if (t.offer_notes) setOfferNotes(t.offer_notes);
         setStages([
           { _type:"screening",
             date_recruiter:t.date_recruiter||"", recruiter_name:t.recruiter_name||"",
@@ -194,7 +208,9 @@ const STATUS_TO_TL = {
             screener_name:  s.screener_name||null,
             screening_type: s.screening_type||null,
             pending:        isPending ? 1 : 0,
-            date_rejected:  isRejected ? (rejDate||null) : null,
+            date_closed:    isRejected ? (closedDate||null) : null,
+            offer_date:     offerDate||null,
+            offer_notes:    offerNotes||null,
           },{id:timelineId});
           // Save rounds
           for (const r of stages.filter(x=>x._type==="round")) {
@@ -589,34 +605,77 @@ const STATUS_TO_TL = {
 
                   {isAuth && editing && <button className="btn-ghost" onClick={addRound}>+ Add Round</button>}
 
+                  {/* ── Offer card ────────────────────────────────────────── */}
+                  {isAuth && (showOffer || offerDate) && (
+                    <div className="modal-section">
+                      <div className="modal-section-title">Offer</div>
+                      <FormField label="Offer Date">
+                        {editing
+                          ? <input className="form-input" type="date" value={offerDate} onChange={e=>{ setOfferDate(e.target.value); if(e.target.value) sf("status","Offer"); }} />
+                          : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>{offerDate||"—"}</span>}
+                      </FormField>
+                      <FormField label="Offer Notes">
+                        {editing
+                          ? <textarea className="form-textarea" value={offerNotes} onChange={e=>setOfferNotes(e.target.value)} placeholder="Compensation details, conditions…" />
+                          : <div style={{ fontSize:12,color:"var(--text-secondary)",lineHeight:1.6,whiteSpace:"pre-wrap" }}>{offerNotes||"—"}</div>}
+                      </FormField>
+                    </div>
+                  )}
+                  {isAuth && editing && !showOffer && !offerDate && (
+                    <button className="btn-ghost" style={{ marginTop:4 }} onClick={()=>{ setShowOffer(true); setOfferDate(localToday()); sf("status","Offer"); }}>+ Add Offer</button>
+                  )}
+
                   {/* ── Process status ────────────────────────────────────── */}
                   {isAuth && (
                     <div className="modal-section">
                       <div className="modal-section-title">Process Status</div>
-                      <div style={{ display:"flex",gap:8,marginBottom:12,flexWrap:"wrap" }}>
-                        {[
-                          ["pending",  "● Active",  "#34d399"],
-                          ["ghosted",  "◌ Ghosted", "#6b7280"],
-                          ["rejected", "✕ Closed",  "#f87171"],
-                        ].map(([k,l,c])=>(
-                          <button key={k}
-                            onClick={()=>{ if(isAuth&&editing) setTlStatusSync(k); }}
-                            style={{ padding:"6px 14px",borderRadius:6,fontSize:11,cursor:editing?"pointer":"default",fontFamily:"inherit",
-                              border:`1px solid ${tlStatus===k?c:"var(--border)"}`,
-                              background:tlStatus===k?`${c}20`:"transparent",
-                              color:tlStatus===k?c:"var(--text-muted)",
-                              transition:"all 0.12s" }}>
-                            {l}
-                          </button>
-                        ))}
-                      </div>
+                      {(()=>{
+                        const isClosed = tlStatus !== "pending";
+                        const outcomes = [["Rejected","✕ Rejected","#f87171"],["Ghosted","◌ Ghosted","#a78bfa"],["Withdrawn","— Withdrawn","#94a3b8"],["Accepted","✓ Accepted","#4ade80"]];
+                        return (<>
+                          <div style={{ display:"flex",gap:8,marginBottom:isClosed?8:0 }}>
+                            {[["pending","● Active","#3b82f6"],[null,"✕ Closed","#f87171"]].map(([k,l,c])=>{
+                              const active = k==="pending" ? !isClosed : isClosed;
+                              return (
+                                <button key={l}
+                                  onClick={()=>{ if(isAuth&&editing){ if(k==="pending") setTlStatusSync("pending"); else if(!isClosed) setTlStatusSync("Rejected"); } }}
+                                  style={{ padding:"6px 14px",borderRadius:6,fontSize:11,cursor:editing?"pointer":"default",fontFamily:"inherit",
+                                    border:`1px solid ${active?c:"var(--border)"}`,
+                                    background:active?`${c}20`:"transparent",
+                                    color:active?c:"var(--text-muted)",
+                                    transition:"all 0.12s" }}>
+                                  {l}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {isClosed && (
+                            <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:10 }}>
+                              {outcomes.map(([outcome,l,c])=>{
+                                const active = outcome==="Ghosted" ? tlStatus==="ghosted" : (tlStatus==="rejected" && form.status===outcome);
+                                return (
+                                  <button key={outcome}
+                                    onClick={()=>{ if(isAuth&&editing) setTlStatusSync(outcome); }}
+                                    style={{ padding:"4px 10px",borderRadius:5,fontSize:11,cursor:editing?"pointer":"default",fontFamily:"inherit",
+                                      border:`1px solid ${active?c:"var(--border)"}`,
+                                      background:active?`${c}20`:"transparent",
+                                      color:active?c:"var(--text-muted)",
+                                      transition:"all 0.12s" }}>
+                                    {l}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>);
+                      })()}
                       {tlStatus==="rejected" && editing && (
-                        <FormField label="Rejection Date">
-                          <input className="form-input" type="date" value={rejDate} onChange={e=>setRejDate(e.target.value)} />
+                        <FormField label="Closed Date">
+                          <input className="form-input" type="date" value={closedDate} onChange={e=>setClosedDate(e.target.value)} />
                         </FormField>
                       )}
-                      {tlStatus==="rejected" && !editing && rejDate && (
-                        <div style={{ fontSize:12,color:"#f87171" }}>Rejected: {rejDate}</div>
+                      {tlStatus==="rejected" && !editing && closedDate && (
+                        <div style={{ fontSize:12,color:"var(--text-secondary)",marginTop:4 }}>Closed: {closedDate}</div>
                       )}
                       {tlStatus==="ghosted" && (
                         <div style={{ fontSize:11,color:"var(--text-muted)",marginTop:4 }}>
@@ -650,7 +709,7 @@ const STATUS_TO_TL = {
 
 // ── TimelineModal — kept for direct timeline add (no linked application) ──────
 function TimelineModal({ entryId, isNew, onClose, onSaved, onDeleted }) {
-  const [form, setForm]     = useState({ date_recruiter:"", date_screening:"", pending:true, date_rejected:"" });
+  const [form, setForm]     = useState({ date_recruiter:"", date_screening:"", pending:true, date_closed:"" });
   const [rounds, setRounds] = useState([{interview_date:"",interview_type:"",interviewer:"",notes:""}]);
   const [saving, setSaving] = useState(false);
   const [delConf, setDelConf] = useState(false);
@@ -660,7 +719,7 @@ function TimelineModal({ entryId, isNew, onClose, onSaved, onDeleted }) {
     if (isNew) { setForm(f=>({...f,date_applied:localToday()})); return; }
     api("timeline_entry","GET",null,{id:entryId}).then(e=>{
       setForm({ date_recruiter:e.date_recruiter||"",
-        date_screening:e.date_screening||"", pending:!!e.pending, date_rejected:e.date_rejected||"" });
+        date_screening:e.date_screening||"", pending:!!e.pending, date_closed:e.date_closed||"" });
       setRounds((e.rounds||[]).map(r=>({id:r.id,round_order:r.round_order,interview_date:r.interview_date||"",interview_type:r.interview_type||"",interviewer:r.interviewer||"",notes:r.notes||""})));
     });
   },[entryId,isNew]);
@@ -673,7 +732,7 @@ function TimelineModal({ entryId, isNew, onClose, onSaved, onDeleted }) {
   const save = async () => {
     setSaving(true);
     try {
-      const body = { pending:form.pending?1:0, date_rejected:form.date_rejected||null, date_recruiter:form.date_recruiter||null, date_screening:form.date_screening||null };
+      const body = { pending:form.pending?1:0, date_closed:form.date_closed||null, date_recruiter:form.date_recruiter||null, date_screening:form.date_screening||null };
       let tid = entryId;
       if (isNew) { const r = await api("timeline_add","POST",body); tid=r.id; }
       else await api("timeline_update","POST",body,{id:entryId});
@@ -719,7 +778,7 @@ function TimelineModal({ entryId, isNew, onClose, onSaved, onDeleted }) {
                 <button key={k} className={`pill ${(k==="pending"?form.pending:!form.pending)?"active":""}`} onClick={()=>sf("pending",k==="pending")}>{l}</button>
               ))}
             </div>
-            {!form.pending && <FormField label="Rejection Date"><input className="form-input" type="date" value={form.date_rejected} onChange={e=>sf("date_rejected",e.target.value)} /></FormField>}
+            {!form.pending && <FormField label="Closed Date"><input className="form-input" type="date" value={form.date_closed} onChange={e=>sf("date_closed",e.target.value)} /></FormField>}
           </div>
           <div className="modal-section">
             <div className="modal-section-title">Interview Rounds</div>

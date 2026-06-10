@@ -1,6 +1,6 @@
 <?php /* _pipeline-core.php — included by index.php. Never open directly. */ ?>
 // ── Constants & helpers ──────────────────────────────────────────────────────
-const COLORS  = { applied:"#60a5fa", recruiter:"#34d399", screening:"#fbbf24", round:"#c084fc", rejected:"#f87171", ghosted:"#6b7280" };
+const COLORS  = { applied:"#94a3b8", recruiter:"#22d3ee", screening:"#818cf8", round:"#3b82f6", rejected:"#f87171", ghosted:"#fb7185", offer:"#4ade80", accepted:"#22c55e", withdrawn:"#64748b" };
 const LABEL_W = 195;
 const TODAY   = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
 const API     = "api.php";
@@ -52,7 +52,7 @@ const GROUP_LABELS = {
   closed_wdr: "Withdrawn",
 };
 const GROUP_COLORS = {
-  active:     "#c084fc",
+  active:     "#34d399",
   pending:    "#60a5fa",
   closed_pos: "#4ade80",
   closed_rec: "#f87171",
@@ -74,7 +74,7 @@ const STATUS_TRANSITIONS = {
 const RESUME_VERSIONS = ["TPM","SPO","TIM","Custom"];
 const STATUS_DOT_COLORS = {
   "Applied":      "#94a3b8",
-  "Interviewing": "#c084fc",
+  "Interviewing": "#3b82f6",
   "Offer":        "#4ade80",
   "Accepted":     "#22c55e",
   "Rejected":     "#f87171",
@@ -139,7 +139,7 @@ function FormField({ label, children }) {
 
 // ── Timeline: buildTimelineData ───────────────────────────────────────────────
 function buildTimelineData(sorted) {
-  const allDates = sorted.flatMap(i=>[i.applied,i.recruiter,i.screening,...(i.rounds||[]),i.rejected]).filter(Boolean).map(d=>new Date(d));
+  const allDates = sorted.flatMap(i=>[i.applied,i.recruiter,i.screening,...(i.rounds||[]),i.rejected,i.offer_date]).filter(Boolean).map(d=>new Date(d));
   const earliest = new Date(Math.min(...allDates));
   const START    = new Date(earliest.getFullYear(), earliest.getMonth(), 1); // first day of earliest month
   const latest   = new Date(Math.max(...allDates, TODAY));
@@ -182,7 +182,7 @@ function buildStats(sorted) {
 function Legend({ showEditHint=false }) {
   return (
     <div style={{ display:"flex", gap:18, flexWrap:"wrap", padding:"9px 14px", background:"var(--stat-bg)", border:"1px solid var(--border)", borderRadius:8, width:"fit-content" }}>
-      {[["Applied",COLORS.applied],["Recruiter",COLORS.recruiter],["Screening",COLORS.screening],["Interview Round",COLORS.round],["Rejected",COLORS.rejected],["Ghosted",COLORS.ghosted]].map(([l,c])=>(
+      {[["Applied",COLORS.applied],["Recruiter",COLORS.recruiter],["Screening",COLORS.screening],["Interview Round",COLORS.round],["Offer",COLORS.offer],["Rejected",COLORS.rejected],["Accepted",COLORS.accepted],["Withdrawn",COLORS.withdrawn],["Ghosted",COLORS.ghosted]].map(([l,c])=>(
         <div key={l} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11 }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:c, boxShadow:`0 0 5px ${c}80` }} />
           <span style={{ color:"var(--text-secondary)" }}>{l}</span>
@@ -213,10 +213,11 @@ function TimelineTooltip({ item, tipPos }) {
         {item.screening && !sameRS && <div style={{ color:COLORS.screening }}>● Screening: {item.screening} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(item.recruiter,item.screening)}d later)</span></div>}
         {item.screening && sameRS  && <div style={{ color:COLORS.screening }}>● Screening: {item.screening} <span style={{ color:"var(--text-dim)", fontSize:11 }}>(same day)</span></div>}
         {rounds.map((r,ri)=>{ const prev=ri===0?item.screening:rounds[ri-1]; return <div key={ri} style={{ color:COLORS.round }}>● Round {ri+1}: {r} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(prev,r)}d later)</span></div>; })}
+        {item.offer_date && <div style={{ color:COLORS.offer }}>● Offer: {item.offer_date}</div>}
         {item.rejected
-          ? <div style={{ color:COLORS.rejected }}>● Rejected: {item.rejected} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(rounds.length>0?rounds[rounds.length-1]:item.screening,item.rejected)}d later)</span></div>
+          ? <div style={{ color:item.status==="Accepted"?COLORS.accepted:item.status==="Withdrawn"?COLORS.withdrawn:COLORS.rejected }}>● {item.status==="Accepted"?"Accepted":item.status==="Withdrawn"?"Withdrawn":"Rejected"}: {item.rejected} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(rounds.length>0?rounds[rounds.length-1]:item.screening,item.rejected)}d later)</span></div>
           : item.pending
-            ? <div style={{ color:"#34d399" }}>● Active / Pending</div>
+            ? <div style={{ color:"#3b82f6" }}>● Active / Pending</div>
             : <div style={{ color:COLORS.ghosted }}>● Ghosted</div>
         }
         {(() => {
@@ -245,6 +246,10 @@ function PipelineRow({ item, hovered, setHov, setTipPos, toX, onRowClick, onLink
   const rX    = item.recruiter ? toX(pd(item.recruiter)) : null;
   const sX    = item.screening ? toX(pd(item.screening)) : null;
   const pen   = !!item.pending;
+  const acc   = item.status === "Accepted";
+  const closedColor = item.rejected
+    ? (item.status==="Accepted" ? COLORS.accepted : item.status==="Withdrawn" ? COLORS.withdrawn : COLORS.rejected)
+    : null;
   // Only ghosted if there was actual activity (recruiter contact or screening)
   const hasActivity = !!(item.recruiter || item.screening || rounds.length > 0);
   const gho   = hasActivity && !item.rejected && !pen;
@@ -261,8 +266,8 @@ function PipelineRow({ item, hovered, setHov, setTipPos, toX, onRowClick, onLink
     <div key={item.id}
       style={{ display:"flex", alignItems:"center", height:44, marginBottom:3, borderRadius:6,
         cursor:onRowClick?"pointer":"default", position:"relative", zIndex:1,
-        background:hov?(pen?"rgba(52,211,153,0.08)":"rgba(96,165,250,0.07)"):(pen?"rgba(52,211,153,0.03)":"transparent"),
-        borderLeft:hov?(pen?"2px solid rgba(52,211,153,0.5)":"2px solid rgba(96,165,250,0.35)"):(pen?"2px solid rgba(52,211,153,0.2)":"2px solid transparent"),
+        background:hov?(pen?"rgba(59,130,246,0.10)":acc?"rgba(34,197,94,0.08)":"rgba(148,163,184,0.06)"):(pen?"rgba(59,130,246,0.04)":acc?"rgba(34,197,94,0.03)":"transparent"),
+        borderLeft:hov?(pen?"2px solid rgba(59,130,246,0.60)":acc?"2px solid rgba(34,197,94,0.50)":"2px solid rgba(148,163,184,0.25)"):(pen?"2px solid rgba(59,130,246,0.25)":acc?"2px solid rgba(34,197,94,0.20)":"2px solid transparent"),
         transition:"background 0.12s" }}
       onMouseEnter={e=>{setHov(item.id);setTipPos({x:e.clientX,y:e.clientY});}}
       onMouseLeave={()=>setHov(null)}
@@ -271,8 +276,8 @@ function PipelineRow({ item, hovered, setHov, setTipPos, toX, onRowClick, onLink
     >
       <div style={{ width:LABEL_W-2, flexShrink:0, paddingRight:14, textAlign:"right", display:"flex", flexDirection:"column", alignItems:"flex-end", justifyContent:"center" }}>
         <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-          {pen && <div style={{ width:6, height:6, borderRadius:"50%", background:"#34d399", boxShadow:"0 0 6px #34d399", flexShrink:0 }} />}
-          <div style={{ fontSize:12, fontWeight:600, color:hov?"var(--text-primary)":pen?"var(--text-active)":"var(--text-dim)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", transition:"color 0.12s", maxWidth: pen ? "calc(100% - 11px)" : "100%" }}>{item.company}</div>
+          {(pen || acc) && <div style={{ width:6, height:6, borderRadius:"50%", background:pen?"#3b82f6":"#22c55e", boxShadow:pen?"0 0 6px #3b82f6":"0 0 6px #22c55e", flexShrink:0 }} />}
+          <div style={{ fontSize:12, fontWeight:600, color:hov?"var(--text-primary)":(pen||acc)?"var(--text-active)":"var(--text-dim)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", transition:"color 0.12s", maxWidth:(pen||acc)?"calc(100% - 11px)":"100%" }}>{item.company}</div>
         </div>
         <div className={`${item.rating>=65&&item.rating<80?"rating-badge-mid":""}`} style={{ display:"inline-block", fontSize:10, fontWeight:700, color:rc(item.rating), background:rb(item.rating), padding:"1px 5px", borderRadius:3, marginTop:1 }}>{item.rating}</div>
       </div>
@@ -281,14 +286,15 @@ function PipelineRow({ item, hovered, setHov, setTipPos, toX, onRowClick, onLink
           <div style={{ position:"absolute", left:`${aX}%`, width:`${Math.max(lrX-aX,0.3)}%`, top:"50%", height:3, transform:"translateY(-50%)", background:`linear-gradient(90deg,${COLORS.applied}50,${COLORS.screening}50)`, borderRadius:2 }} />
           <div style={{ position:"absolute", left:`${lrX}%`, width:`${Math.max(toX(gDate)-lrX,0.3)}%`, top:"50%", height:3, transform:"translateY(-50%)", background:"repeating-linear-gradient(90deg,#4b5563 0,#4b5563 5px,transparent 5px,transparent 10px)", borderRadius:2 }} />
         </>) : (
-          <div style={{ position:"absolute", left:`${aX}%`, width:`${Math.max(eX-aX,0.3)}%`, top:"50%", height:3, transform:"translateY(-50%)", background:item.rejected?`linear-gradient(90deg,${COLORS.applied}50,${COLORS.rejected}50)`:`linear-gradient(90deg,${COLORS.applied}50,${COLORS.round}50)`, borderRadius:2 }} />
+          <div style={{ position:"absolute", left:`${aX}%`, width:`${Math.max(eX-aX,0.3)}%`, top:"50%", height:3, transform:"translateY(-50%)", background:item.rejected?`linear-gradient(90deg,${COLORS.applied}50,${closedColor}50)`:`linear-gradient(90deg,${COLORS.applied}50,${COLORS.round}50)`, borderRadius:2 }} />
         )}
         <Dot x={aX} color={COLORS.applied} glow={hov} size={9} />
         {!sameRS && item.recruiter && <Dot x={rX} color={COLORS.recruiter} glow={hov} size={8} border={true} />}
         {item.screening && <Dot x={sX} color={COLORS.screening} glow={hov} size={10} />}
         {rounds.map((r,ri)=><Dot key={ri} x={toX(pd(r))} color={COLORS.round} glow={hov} size={10} border={true} />)}
-        {item.rejected && <Dot x={eX} color={COLORS.rejected} glow={hov} size={10} />}
+        {item.rejected && <Dot x={eX} color={closedColor} glow={hov} size={10} />}
         {gho && <Dot x={toX(gDate)} color={COLORS.ghosted} glow={hov} size={8} />}
+        {item.offer_date && <Dot x={toX(pd(item.offer_date))} color={COLORS.offer} glow={hov} size={10} border={true} />}
       </div>
     </div>
   );
@@ -794,7 +800,9 @@ function TimelineTab({ isAuth, onRowClick, onLinkClick, refreshKey }) {
         applied:   e.date_applied,
         recruiter: e.date_recruiter,
         screening: e.date_screening,
-        rejected:  e.date_rejected,
+        rejected:  e.date_closed,
+        offer_date: e.offer_date||null,
+        status:    e.status,
         pending:   !!e.pending,
         rounds:      (e.rounds_full||[]).map(r=>r.interview_date).filter(Boolean),
         rounds_full: e.rounds_full||[],

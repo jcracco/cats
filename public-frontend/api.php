@@ -379,7 +379,7 @@ if ($action === 'timeline') {
     $entries = $pdo->query("
         SELECT t.*,
                a.company, a.job_title AS position, a.rating, a.date_applied,
-               a.via_recruiting_firm, a.recruiting_firm
+               a.status, a.via_recruiting_firm, a.recruiting_firm
         FROM timeline_entries t
         JOIN applications a ON t.application_id = a.id
         ORDER BY a.date_applied ASC
@@ -404,7 +404,7 @@ if ($action === 'timeline_entry') {
     $stmt = $pdo->prepare("
         SELECT t.*,
                a.company, a.job_title AS position, a.rating, a.date_applied,
-               a.via_recruiting_firm, a.recruiting_firm
+               a.status, a.via_recruiting_firm, a.recruiting_firm
         FROM timeline_entries t
         JOIN applications a ON t.application_id = a.id
         WHERE t.id=?
@@ -426,12 +426,13 @@ if ($action === 'timeline_add') {
     auth_required(); $b = body(); $pdo = db();
     $stmt = $pdo->prepare("INSERT INTO timeline_entries
         (date_recruiter,recruiter_name,date_screening,screener_name,
-         screening_type,pending,date_rejected,application_id)
-        VALUES (?,?,?,?,?,?,?,?)");
+         screening_type,pending,date_closed,offer_date,offer_notes,application_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         date_or_null($b,'date_recruiter'), str_or_null($b,'recruiter_name'),
         date_or_null($b,'date_screening'), str_or_null($b,'screener_name'), str_or_null($b,'screening_type'),
-        (int)($b['pending']??1), date_or_null($b,'date_rejected'), int_or_null($b,'application_id'),
+        (int)($b['pending']??1), date_or_null($b,'date_closed'),
+        date_or_null($b,'offer_date'), str_or_null($b,'offer_notes'), int_or_null($b,'application_id'),
     ]);
     ok(['id' => (int)$pdo->lastInsertId()]);
 }
@@ -441,12 +442,13 @@ if ($action === 'timeline_update') {
     auth_required(); $id = (int)($_GET['id']??0); $b = body(); $pdo = db();
     $stmt = $pdo->prepare("UPDATE timeline_entries SET
         date_recruiter=?,recruiter_name=?,date_screening=?,screener_name=?,
-        screening_type=?,pending=?,date_rejected=?
+        screening_type=?,pending=?,date_closed=?,offer_date=?,offer_notes=?
         WHERE id=?");
     $stmt->execute([
         date_or_null($b,'date_recruiter'), str_or_null($b,'recruiter_name'),
         date_or_null($b,'date_screening'), str_or_null($b,'screener_name'), str_or_null($b,'screening_type'),
-        (int)($b['pending']??1), date_or_null($b,'date_rejected'), $id,
+        (int)($b['pending']??1), date_or_null($b,'date_closed'),
+        date_or_null($b,'offer_date'), str_or_null($b,'offer_notes'), $id,
     ]);
     ok();
 }
@@ -548,17 +550,17 @@ if ($action === 'application_status') {
         $tid   = $app['timeline_id'];
         $today = date('Y-m-d');
         if ($status === 'Ghosted') {
-            // Ghosted: pending=0, NO rejection date — timeline renders dotted line
-            $pdo->prepare("UPDATE timeline_entries SET pending=0, date_rejected=NULL WHERE id=?")
+            // Ghosted: pending=0, NO closed date — timeline renders dotted line
+            $pdo->prepare("UPDATE timeline_entries SET pending=0, date_closed=NULL WHERE id=?")
                 ->execute([$tid]);
         } elseif (in_array($status, ['Rejected','Not Selected','No Answer','Withdrawn','Accepted'])) {
-            // Closed with a definitive end: set today as rejection date so timeline
+            // Closed with a definitive end: set today as closed date so timeline
             // renders the red dot rather than the ghosted dotted line
-            $pdo->prepare("UPDATE timeline_entries SET pending=0, date_rejected=? WHERE id=?")
+            $pdo->prepare("UPDATE timeline_entries SET pending=0, date_closed=? WHERE id=?")
                 ->execute([$today, $tid]);
         } elseif (in_array($status, ['Interviewing','Offer','Applied'])) {
-            // Reopening: pending=1, clear rejection date
-            $pdo->prepare("UPDATE timeline_entries SET pending=1, date_rejected=NULL WHERE id=?")
+            // Reopening: pending=1, clear closed date
+            $pdo->prepare("UPDATE timeline_entries SET pending=1, date_closed=NULL WHERE id=?")
                 ->execute([$tid]);
         }
     } elseif ($app && !$app['timeline_id'] && $status === 'Interviewing') {

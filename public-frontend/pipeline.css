@@ -489,7 +489,7 @@ h1 {
   white-space: nowrap;
 }
 .badge-applied       { background: rgba(148,163,184,0.12); color: #94a3b8;  border: 1px solid rgba(148,163,184,0.25); }
-.badge-interviewing  { background: rgba(192,132,252,0.12); color: #c084fc;  border: 1px solid rgba(192,132,252,0.3);  }
+.badge-interviewing  { background: rgba(59,130,246,0.12);  color: #3b82f6;  border: 1px solid rgba(59,130,246,0.3);   }
 .badge-offer         { background: rgba(74,222,128,0.12);  color: #4ade80;  border: 1px solid rgba(74,222,128,0.3);   }
 .badge-accepted      { background: rgba(74,222,128,0.2);   color: #22c55e;  border: 1px solid rgba(74,222,128,0.4);   }
 .badge-rejected      { background: rgba(248,113,113,0.12); color: #f87171;  border: 1px solid rgba(248,113,113,0.3);  }
@@ -500,7 +500,7 @@ h1 {
 
 /* Light theme badge tweaks */
 [data-theme="light"] .badge-applied      { background: rgba(100,116,139,0.08); }
-[data-theme="light"] .badge-interviewing { background: rgba(147,51,234,0.08);  }
+[data-theme="light"] .badge-interviewing { background: rgba(59,130,246,0.08);  }
 
 /* ── Modal — application ─────────────────────────────────────────────────── */
 .app-modal {
@@ -772,7 +772,7 @@ h1 {
 [data-theme="light"] .app-table th { background: #e8edf5; }
 [data-theme="light"] .app-table tr:hover td { background: rgba(29,78,216,0.04); }
 [data-theme="light"] .badge-applied      { background: rgba(100,116,139,0.1); border-color: rgba(100,116,139,0.3); }
-[data-theme="light"] .badge-interviewing { background: rgba(147,51,234,0.1);  border-color: rgba(147,51,234,0.3); color: #7c3aed; }
+[data-theme="light"] .badge-interviewing { background: rgba(59,130,246,0.1);   border-color: rgba(59,130,246,0.3);  color: #1d4ed8; }
 [data-theme="light"] .badge-offer        { background: rgba(22,163,74,0.1);   border-color: rgba(22,163,74,0.3);  color: #16a34a; }
 [data-theme="light"] .badge-accepted     { background: rgba(22,163,74,0.15);  border-color: rgba(22,163,74,0.4);  color: #15803d; }
 [data-theme="light"] .badge-rejected     { background: rgba(220,38,38,0.1);   border-color: rgba(220,38,38,0.3);  color: #dc2626; }
