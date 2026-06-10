@@ -40,39 +40,18 @@ if (isset($_SERVER['HTTP_HOST']) &&
     exit;
 }
 
-// ── Session token store (flat file, above web root) ───────────────────────────
-define('TOKEN_FILE', PRIVATE_PATH . 'session_tokens.json');
-
-function load_tokens(): array {
-    if (!file_exists(TOKEN_FILE)) return [];
-    $data = json_decode(file_get_contents(TOKEN_FILE), true);
-    // Purge expired tokens
-    $now = time();
-    $data = array_filter($data ?? [], fn($t) => $t['expires'] > $now);
-    return $data;
-}
+// ── Session token write helpers (read helpers live in bootstrap.php) ──────────
 function save_tokens(array $tokens): void {
     file_put_contents(TOKEN_FILE, json_encode(array_values($tokens)));
 }
 function generate_token(): string {
     return bin2hex(random_bytes(32));
 }
-function is_authenticated(): bool {
-    $cookie = $_COOKIE[SESSION_COOKIE] ?? '';
-    if (!$cookie) return false;
-    $tokens = load_tokens();
-    foreach ($tokens as $t) {
-        if (hash_equals($t['token'], $cookie) && $t['expires'] > time()) {
-            return true;
-        }
-    }
-    return false;
-}
-function set_auth_cookie(): void {
+function set_auth_cookie(int $user_id): void {
     $token   = generate_token();
     $expires = time() + SESSION_DURATION;
-    $tokens  = load_tokens();
-    $tokens[] = ['token' => $token, 'expires' => $expires];
+    $tokens  = _load_tokens();
+    $tokens[] = ['token' => $token, 'expires' => $expires, 'user_id' => $user_id];
     save_tokens($tokens);
     setcookie(SESSION_COOKIE, $token, [
         'expires'  => $expires,
@@ -85,7 +64,7 @@ function set_auth_cookie(): void {
 function clear_auth_cookie(): void {
     $cookie = $_COOKIE[SESSION_COOKIE] ?? '';
     if ($cookie) {
-        $tokens = load_tokens();
+        $tokens = _load_tokens();
         $tokens = array_filter($tokens, fn($t) => !hash_equals($t['token'], $cookie));
         save_tokens(array_values($tokens));
     }
@@ -114,6 +93,11 @@ function body(): array {
 function auth_required(): void {
     if (!is_authenticated()) fail('Not authenticated', 401);
 }
+function authed_uid(): int {
+    $uid = current_user_id();
+    if (!$uid) fail('Not authenticated', 401);
+    return $uid;
+}
 function str_or_null(array $data, string $key): ?string {
     $v = trim($data[$key] ?? '');
     return $v === '' ? null : $v;
@@ -138,9 +122,12 @@ if (!in_array($action, ['session', 'login']) && !is_authenticated()) {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 if ($action === 'login') {
-    $b = body();
-    if (($b['username'] ?? '') === AUTH_USER && password_verify($b['password'] ?? '', AUTH_PASS)) {
-        set_auth_cookie();
+    $b    = body();
+    $stmt = db()->prepare("SELECT id, password_hash FROM users WHERE username = ?");
+    $stmt->execute([$b['username'] ?? '']);
+    $user = $stmt->fetch();
+    if ($user && password_verify($b['password'] ?? '', $user['password_hash'])) {
+        set_auth_cookie((int)$user['id']);
         ok(['auth' => true]);
     } else {
         fail('Invalid credentials', 401);
@@ -153,39 +140,51 @@ if ($action === 'logout') {
 }
 
 if ($action === 'session') {
-    ok(['auth' => is_authenticated()]);
+    $t = _current_token_data();
+    if (!$t) { ok(['auth' => false]); }
+    $stmt = db()->prepare("SELECT username, is_admin FROM users WHERE id = ?");
+    $stmt->execute([$t['user_id'] ?? 0]);
+    $user = $stmt->fetch();
+    ok(['auth' => true, 'username' => $user['username'] ?? null, 'is_admin' => (bool)($user['is_admin'] ?? false)]);
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 if ($action === 'stats') {
+    auth_required();
     $pdo = db();
-    $total              = (int)$pdo->query("SELECT COUNT(*) FROM applications")->fetchColumn();
-    $active             = (int)$pdo->query("SELECT COUNT(*) FROM applications WHERE status IN ('Interviewing','Offer')")->fetchColumn();
-    $reached_recruiter  = (int)$pdo->query("SELECT COUNT(*) FROM applications a JOIN timeline_entries t ON a.timeline_id=t.id WHERE t.date_recruiter IS NOT NULL")->fetchColumn();
-    $avg_rating         = round((float)$pdo->query("SELECT AVG(rating) FROM applications WHERE rating IS NOT NULL")->fetchColumn(), 1);
-    $closed_positive    = (int)$pdo->query("SELECT COUNT(*) FROM applications WHERE status='Accepted'")->fetchColumn();
-    $closed_reached     = (int)$pdo->query("SELECT COUNT(*) FROM applications WHERE status IN ('Rejected','Ghosted')")->fetchColumn();
-    $closed_no_prog     = (int)$pdo->query("SELECT COUNT(*) FROM applications WHERE status IN ('Not Selected','No Answer','Withdrawn')")->fetchColumn();
-    $this_week          = (int)$pdo->query("SELECT COUNT(*) FROM applications WHERE YEARWEEK(date_applied,1)=YEARWEEK(CURDATE(),1)")->fetchColumn();
-    $this_month         = (int)$pdo->query("SELECT COUNT(*) FROM applications WHERE YEAR(date_applied)=YEAR(CURDATE()) AND MONTH(date_applied)=MONTH(CURDATE())")->fetchColumn();
-    $first              = $pdo->query("SELECT MIN(date_applied) FROM applications")->fetchColumn();
+    $uid = current_user_id();
+    $q   = function(string $sql, array $params = []) use ($pdo, $uid) {
+        $s = $pdo->prepare($sql); $s->execute(array_merge([$uid], $params)); return $s->fetchColumn();
+    };
+    $total              = (int)$q("SELECT COUNT(*) FROM applications WHERE user_id=?");
+    $active             = (int)$q("SELECT COUNT(*) FROM applications WHERE user_id=? AND status IN ('Interviewing','Offer')");
+    $reached_recruiter  = (int)$q("SELECT COUNT(*) FROM applications a JOIN timeline_entries t ON a.timeline_id=t.id WHERE a.user_id=? AND t.date_recruiter IS NOT NULL");
+    $avg_rating         = round((float)$q("SELECT AVG(rating) FROM applications WHERE user_id=? AND rating IS NOT NULL"), 1);
+    $closed_positive    = (int)$q("SELECT COUNT(*) FROM applications WHERE user_id=? AND status='Accepted'");
+    $closed_reached     = (int)$q("SELECT COUNT(*) FROM applications WHERE user_id=? AND status IN ('Rejected','Ghosted')");
+    $closed_no_prog     = (int)$q("SELECT COUNT(*) FROM applications WHERE user_id=? AND status IN ('Not Selected','No Answer','Withdrawn')");
+    $this_week          = (int)$q("SELECT COUNT(*) FROM applications WHERE user_id=? AND YEARWEEK(date_applied,1)=YEARWEEK(CURDATE(),1)");
+    $this_month         = (int)$q("SELECT COUNT(*) FROM applications WHERE user_id=? AND YEAR(date_applied)=YEAR(CURDATE()) AND MONTH(date_applied)=MONTH(CURDATE())");
+    $first              = $q("SELECT MIN(date_applied) FROM applications WHERE user_id=?");
     $avg_week = $avg_month = null;
     if ($first) {
         $weeks     = max(1, ceil((time() - strtotime($first)) / 604800));
-        $months    = max(1, (int)$pdo->query("SELECT PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),DATE_FORMAT(MIN(date_applied),'%Y%m'))+1 FROM applications")->fetchColumn());
+        $months    = max(1, (int)$q("SELECT PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),DATE_FORMAT(MIN(date_applied),'%Y%m'))+1 FROM applications WHERE user_id=?"));
         $avg_week  = round($total / $weeks, 1);
         $avg_month = round($total / $months, 1);
     }
-    $reached_final_round = (int)$pdo->query("SELECT COUNT(DISTINCT t.application_id) FROM interview_rounds r JOIN timeline_entries t ON r.timeline_id=t.id WHERE r.is_final_round=1 AND t.application_id IS NOT NULL")->fetchColumn();
+    $reached_final_round = (int)$q("SELECT COUNT(DISTINCT t.application_id) FROM interview_rounds r JOIN timeline_entries t ON r.timeline_id=t.id JOIN applications a ON t.application_id=a.id WHERE a.user_id=? AND r.is_final_round=1 AND t.application_id IS NOT NULL");
     ok(compact('total','active','reached_recruiter','reached_final_round','avg_rating','closed_positive','closed_reached','closed_no_prog','this_week','this_month','avg_week','avg_month'));
 }
 
 // ── Applications — list ───────────────────────────────────────────────────────
 if ($action === 'applications') {
+    auth_required();
     $pdo     = db();
-    $is_auth = is_authenticated();
-    $where   = ['1=1'];
-    $params  = [];
+    $is_auth = true;
+    $uid     = current_user_id();
+    $where   = ['a.user_id = ?'];
+    $params  = [$uid];
 
     $search = trim($_GET['search'] ?? '');
     if ($search !== '') {
@@ -277,16 +276,15 @@ if ($action === 'applications') {
 
 // ── Application — single ──────────────────────────────────────────────────────
 if ($action === 'application') {
-    $id      = (int)($_GET['id'] ?? 0);
-    $pdo     = db();
-    $is_auth = is_authenticated();
+    auth_required();
+    $id  = (int)($_GET['id'] ?? 0);
+    $pdo = db();
+    $uid = current_user_id();
 
-    $stmt = $pdo->prepare("SELECT * FROM applications WHERE id=?");
-    $stmt->execute([$id]);
+    $stmt = $pdo->prepare("SELECT * FROM applications WHERE id=? AND user_id=?");
+    $stmt->execute([$id, $uid]);
     $app = $stmt->fetch();
     if (!$app) fail('Not found', 404);
-
-    if (!$is_auth) unset($app['contacts'], $app['notes'], $app['job_description']);
 
     $timeline = null;
     $rounds   = [];
@@ -295,11 +293,9 @@ if ($action === 'application') {
         $ts->execute([$app['timeline_id']]);
         $timeline = $ts->fetch() ?: null;
         if ($timeline) {
-            if (!$is_auth) unset($timeline['recruiter_name'], $timeline['screener_name']);
             $rs = $pdo->prepare("SELECT * FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
             $rs->execute([$app['timeline_id']]);
             $rounds = $rs->fetchAll();
-            if (!$is_auth) { foreach ($rounds as &$r) unset($r['interviewer'], $r['notes']); }
         }
     }
     ok(['application' => $app, 'timeline' => $timeline, 'rounds' => $rounds]);
@@ -308,15 +304,16 @@ if ($action === 'application') {
 // ── Application — add ─────────────────────────────────────────────────────────
 if ($action === 'application_add') {
     auth_required();
-    $b = body(); $pdo = db();
+    $b = body(); $pdo = db(); $uid = authed_uid();
     $stmt = $pdo->prepare("INSERT INTO applications
-        (date_applied,company,via_recruiting_firm,recruiting_firm,job_title,
+        (user_id,date_applied,company,via_recruiting_firm,recruiting_firm,job_title,
          location_type,hybrid_location,days_onsite,source,applied_through,
          resume_version,rating,status,job_id,job_link,dashboard_link,
          salary_requested,salary_listed,salary_type,contacts,notes,job_description,
          cover_letter,has_outreach,outreach_notes)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
+        $uid,
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
         str_or_null($b,'company'), (int)($b['via_recruiting_firm']??0), str_or_null($b,'recruiting_firm'),
         trim($b['job_title']??''), $b['location_type']??'Remote', str_or_null($b,'hybrid_location'),
@@ -335,9 +332,9 @@ if ($action === 'application_add') {
 // ── Application — update ──────────────────────────────────────────────────────
 if ($action === 'application_update') {
     auth_required();
-    $id = (int)($_GET['id']??0); $b = body(); $pdo = db();
-    $cur = $pdo->prepare("SELECT status,timeline_id FROM applications WHERE id=?");
-    $cur->execute([$id]); $current = $cur->fetch();
+    $id = (int)($_GET['id']??0); $b = body(); $pdo = db(); $uid = authed_uid();
+    $cur = $pdo->prepare("SELECT status,timeline_id FROM applications WHERE id=? AND user_id=?");
+    $cur->execute([$id, $uid]); $current = $cur->fetch();
     if (!$current) fail('Not found', 404);
     $stmt = $pdo->prepare("UPDATE applications SET
         date_applied=?,company=?,via_recruiting_firm=?,recruiting_firm=?,job_title=?,
@@ -345,7 +342,7 @@ if ($action === 'application_update') {
         resume_version=?,rating=?,status=?,job_id=?,job_link=?,dashboard_link=?,
         salary_requested=?,salary_listed=?,salary_type=?,contacts=?,notes=?,job_description=?,
         cover_letter=?,has_outreach=?,outreach_notes=?
-        WHERE id=?");
+        WHERE id=? AND user_id=?");
     $stmt->execute([
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
         str_or_null($b,'company'), (int)($b['via_recruiting_firm']??0), str_or_null($b,'recruiting_firm'),
@@ -356,7 +353,7 @@ if ($action === 'application_update') {
         str_or_null($b,'salary_requested'), str_or_null($b,'salary_listed'), $b['salary_type']??'Yearly',
         str_or_null($b,'contacts'), str_or_null($b,'notes'), str_or_null($b,'job_description'),
         int_or_null($b,'cover_letter'), int_or_null($b,'has_outreach'), str_or_null($b,'outreach_notes'),
-        $id,
+        $id, $uid,
     ]);
     if (($b['status']??'') === 'Interviewing' && !$current['timeline_id'])
         _auto_create_timeline($pdo, $id, $b);
@@ -366,37 +363,37 @@ if ($action === 'application_update') {
 // ── Application — delete ──────────────────────────────────────────────────────
 if ($action === 'application_delete') {
     auth_required();
-    $id = (int)($_GET['id']??0); $pdo = db();
-    $row = $pdo->prepare("SELECT timeline_id FROM applications WHERE id=?");
-    $row->execute([$id]); $app = $row->fetch();
+    $id = (int)($_GET['id']??0); $pdo = db(); $uid = authed_uid();
+    $row = $pdo->prepare("SELECT timeline_id FROM applications WHERE id=? AND user_id=?");
+    $row->execute([$id, $uid]); $app = $row->fetch();
     if (!$app) fail('Not found', 404);
     if ($app['timeline_id']) {
         $pdo->prepare("DELETE FROM interview_rounds WHERE timeline_id=?")->execute([$app['timeline_id']]);
         $pdo->prepare("DELETE FROM timeline_entries WHERE id=?")->execute([$app['timeline_id']]);
     }
-    $pdo->prepare("DELETE FROM applications WHERE id=?")->execute([$id]);
+    $pdo->prepare("DELETE FROM applications WHERE id=? AND user_id=?")->execute([$id, $uid]);
     ok();
 }
 
 // ── Timeline — list ───────────────────────────────────────────────────────────
 if ($action === 'timeline') {
-    $pdo = db(); $is_auth = is_authenticated();
-    $entries = $pdo->query("
+    auth_required();
+    $pdo = db(); $uid = current_user_id();
+    $stmt = $pdo->prepare("
         SELECT t.*,
                a.company, a.job_title AS position, a.rating, a.date_applied,
                a.status, a.via_recruiting_firm, a.recruiting_firm
         FROM timeline_entries t
         JOIN applications a ON t.application_id = a.id
+        WHERE a.user_id = ?
         ORDER BY a.date_applied ASC
-    ")->fetchAll();
+    ");
+    $stmt->execute([$uid]);
+    $entries = $stmt->fetchAll();
     foreach ($entries as &$entry) {
         $rs = $pdo->prepare("SELECT * FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
         $rs->execute([$entry['id']]);
         $rounds = $rs->fetchAll();
-        if (!$is_auth) {
-            foreach ($rounds as &$r) unset($r['interviewer'], $r['notes']);
-            unset($entry['recruiter_name'], $entry['screener_name']);
-        }
         $entry['rounds']      = array_values(array_filter(array_column($rounds,'interview_date')));
         $entry['rounds_full'] = $rounds;
     }
@@ -405,23 +402,20 @@ if ($action === 'timeline') {
 
 // ── Timeline — single ─────────────────────────────────────────────────────────
 if ($action === 'timeline_entry') {
-    $id = (int)($_GET['id']??0); $pdo = db(); $is_auth = is_authenticated();
+    auth_required();
+    $id = (int)($_GET['id']??0); $pdo = db(); $uid = current_user_id();
     $stmt = $pdo->prepare("
         SELECT t.*,
                a.company, a.job_title AS position, a.rating, a.date_applied,
                a.status, a.via_recruiting_firm, a.recruiting_firm
         FROM timeline_entries t
         JOIN applications a ON t.application_id = a.id
-        WHERE t.id=?
+        WHERE t.id=? AND a.user_id=?
     ");
-    $stmt->execute([$id]); $entry = $stmt->fetch();
+    $stmt->execute([$id, $uid]); $entry = $stmt->fetch();
     if (!$entry) fail('Not found', 404);
     $rs = $pdo->prepare("SELECT * FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
     $rs->execute([$id]); $rounds = $rs->fetchAll();
-    if (!$is_auth) {
-        foreach ($rounds as &$r) unset($r['interviewer'], $r['notes']);
-        unset($entry['recruiter_name'], $entry['screener_name']);
-    }
     $entry['rounds'] = $rounds;
     ok($entry);
 }
@@ -469,10 +463,10 @@ if ($action === 'timeline_delete') {
 
 // ── Rounds — list ─────────────────────────────────────────────────────────────
 if ($action === 'rounds') {
-    $tid = (int)($_GET['timeline_id']??0); $pdo = db(); $is_auth = is_authenticated();
+    auth_required();
+    $tid = (int)($_GET['timeline_id']??0); $pdo = db();
     $stmt = $pdo->prepare("SELECT * FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
     $stmt->execute([$tid]); $rounds = $stmt->fetchAll();
-    if (!$is_auth) { foreach ($rounds as &$r) unset($r['interviewer'], $r['notes']); }
     ok($rounds);
 }
 
@@ -543,14 +537,14 @@ function _auto_create_timeline(PDO $pdo, int $app_id, array $b): void {
 // ── Application — quick status update ────────────────────────────────────────
 if ($action === 'application_status') {
     auth_required();
-    $id = (int)($_GET['id']??0); $b = body(); $pdo = db();
+    $id = (int)($_GET['id']??0); $b = body(); $pdo = db(); $uid = authed_uid();
     $status = $b['status'] ?? null;
     if (!$status) fail('Missing status');
-    $stmt = $pdo->prepare("UPDATE applications SET status=? WHERE id=?");
-    $stmt->execute([$status, $id]);
+    $stmt = $pdo->prepare("UPDATE applications SET status=? WHERE id=? AND user_id=?");
+    $stmt->execute([$status, $id, $uid]);
     // Sync timeline entry if one exists
-    $cur = $pdo->prepare("SELECT timeline_id, company, job_title, date_applied, rating, via_recruiting_firm, recruiting_firm FROM applications WHERE id=?");
-    $cur->execute([$id]); $app = $cur->fetch();
+    $cur = $pdo->prepare("SELECT timeline_id, company, job_title, date_applied, rating, via_recruiting_firm, recruiting_firm FROM applications WHERE id=? AND user_id=?");
+    $cur->execute([$id, $uid]); $app = $cur->fetch();
     if ($app && $app['timeline_id']) {
         $tid   = $app['timeline_id'];
         $today = date('Y-m-d');

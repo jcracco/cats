@@ -1276,7 +1276,7 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
   // ── Application — add ──────────────────────────────────────────────────────
   if (action === "application_add") {
     if (!s.auth) throw new Error("Not authenticated");
-    const newApp = { ...body, id: s.nextAppId++, via_recruiting_firm: body.via_recruiting_firm?1:0,
+    const newApp = { ...body, id: s.nextAppId++, user_id: 1, via_recruiting_firm: body.via_recruiting_firm?1:0,
       status: body.status || "Applied", timeline_id: null,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
     s.apps.push(newApp);

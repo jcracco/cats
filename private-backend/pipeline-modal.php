@@ -26,7 +26,7 @@ function LoginModal({ onSuccess, onClose, hint=null }) {
       <div className="modal-backdrop" onClick={onClose} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:500 }} />
       <div className="login-modal" style={{ zIndex:501 }}>
         <div style={{ fontSize:10,letterSpacing:5,color:"var(--eyebrow)",textTransform:"uppercase",fontWeight:600,marginBottom:8 }}>CATS</div>
-        <h2 style={{ fontSize:20,fontWeight:700,color:"var(--text-primary)",marginBottom:16 }}>Admin Login</h2>
+        <h2 style={{ fontSize:20,fontWeight:700,color:"var(--text-primary)",marginBottom:16 }}>Login</h2>
         {hint}
         <FormField label="Username">
           <input className="form-input" value={user} onChange={e=>setUser(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} autoFocus />

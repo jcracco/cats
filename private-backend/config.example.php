@@ -23,13 +23,13 @@ define('DB_NAME', 'cats_db');
 define('DB_USER', 'cats_user');
 define('DB_PASS', 'your_db_password');                  // ← replace
 
-// ── Admin auth ────────────────────────────────────────────────────────────────
-define('AUTH_USER', 'your_username');                   // ← replace
-define('AUTH_PASS', '$2y$12$...');                      // ← replace with hashed password
-
 // ── Session ───────────────────────────────────────────────────────────────────
 define('SESSION_COOKIE',   'cats_session');
 define('SESSION_DURATION', 60 * 60 * 24 * 30); // 30 days
+
+// ── Admin page token ──────────────────────────────────────────────────────────
+// Generate: php -r "echo bin2hex(random_bytes(24));"
+define('ADMIN_TOKEN', 'your_random_secret_here');          // ← replace
 
 // ── Backup ───────────────────────────────────────────────────────────────────
 define('BACKUP_EMAIL_ENABLED', false);               // ← set to true to enable emailing backup file

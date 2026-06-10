@@ -168,7 +168,7 @@ function App() {
           <h1>CATS</h1>
           <div class="eyebrow">Candidate Application Tracker</div>
           <p style={{ fontSize:13, color:"var(--text-muted)" }}>Sign in to access your pipeline.</p>
-          <button className="btn-primary" style={{ padding:"10px 28px", fontSize:13 }} onClick={()=>setShowLogin(true)}>Admin Login</button>
+          <button className="btn-primary" style={{ padding:"10px 28px", fontSize:13 }} onClick={()=>setShowLogin(true)}>Login</button>
         </div>
       )}
       {/* On production, hide everything below until authenticated */}
@@ -201,7 +201,7 @@ function App() {
                   <LogOut size={15} />
                 </button>
               ))
-            : <button className="btn-link" onClick={()=>setShowLogin(true)}>Admin Login</button>
+            : <button className="btn-link" onClick={()=>setShowLogin(true)}>Login</button>
           }
         </div>
       </div>
