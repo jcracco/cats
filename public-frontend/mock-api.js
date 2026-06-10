@@ -29,6 +29,9 @@ const SEED_APPS = [
     "salary_listed": "130-150",
     "salary_type": "Yearly",
     "contacts": "Sarah Chen",
+    "cover_letter": 1,
+    "has_outreach": 1,
+    "outreach_notes": "Sarah Chen via LinkedIn",
     "notes": "Strong fit \u2014 distributed team experience resonated",
     "job_description": "We are looking for a Technical Program Manager to lead delivery...\n\nResponsibilities:\n- Own delivery roadmap across 3 engineering teams\n- Build capacity planning frameworks\n- Drive sprint ceremonies and retrospectives\n\nRequirements:\n- 5+ years TPM or delivery management experience\n- Strong JIRA expertise\n- Experience with distributed teams",
     "timeline_id": 1
@@ -55,6 +58,9 @@ const SEED_APPS = [
     "salary_listed": "130-150",
     "salary_type": "Yearly",
     "contacts": "Sarah Chen",
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": "Strong fit \u2014 distributed team experience resonated",
     "job_description": "We are looking for a Technical Program Manager to lead delivery...\n\nResponsibilities:\n- Own delivery roadmap across 3 engineering teams\n- Build capacity planning frameworks\n- Drive sprint ceremonies and retrospectives\n\nRequirements:\n- 5+ years TPM or delivery management experience\n- Strong JIRA expertise\n- Experience with distributed teams",
     "timeline_id": 2
@@ -81,6 +87,9 @@ const SEED_APPS = [
     "salary_listed": "130-150",
     "salary_type": "Yearly",
     "contacts": "Sarah Chen",
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": "Strong fit \u2014 distributed team experience resonated",
     "job_description": "We are looking for a Technical Program Manager to lead delivery...\n\nResponsibilities:\n- Own delivery roadmap across 3 engineering teams\n- Build capacity planning frameworks\n- Drive sprint ceremonies and retrospectives\n\nRequirements:\n- 5+ years TPM or delivery management experience\n- Strong JIRA expertise\n- Experience with distributed teams",
     "timeline_id": 3
@@ -107,6 +116,9 @@ const SEED_APPS = [
     "salary_listed": "135-145",
     "salary_type": "Yearly",
     "contacts": "Rachel Moore \u2014 Recruiter",
+    "cover_letter": 1,
+    "has_outreach": 1,
+    "outreach_notes": "Rachel Moore via LinkedIn",
     "notes": "Offer received \u2014 evaluating",
     "job_description": null,
     "timeline_id": 4
@@ -133,6 +145,9 @@ const SEED_APPS = [
     "salary_listed": "130-150",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -159,6 +174,9 @@ const SEED_APPS = [
     "salary_listed": "120-140",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -185,6 +203,9 @@ const SEED_APPS = [
     "salary_listed": "140-160",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -211,6 +232,9 @@ const SEED_APPS = [
     "salary_listed": "115-135",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -237,6 +261,9 @@ const SEED_APPS = [
     "salary_listed": "125-145",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 1,
+    "outreach_notes": "Marcus Webb via LinkedIn",
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -263,6 +290,9 @@ const SEED_APPS = [
     "salary_listed": "135-155",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -289,6 +319,9 @@ const SEED_APPS = [
     "salary_listed": "",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -315,6 +348,9 @@ const SEED_APPS = [
     "salary_listed": "120-145",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -341,6 +377,9 @@ const SEED_APPS = [
     "salary_listed": "110-130",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -367,6 +406,9 @@ const SEED_APPS = [
     "salary_listed": "65-75",
     "salary_type": "Hourly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -393,6 +435,9 @@ const SEED_APPS = [
     "salary_listed": "",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -419,6 +464,9 @@ const SEED_APPS = [
     "salary_listed": "130-150",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 1,
+    "has_outreach": 1,
+    "outreach_notes": "Hiring manager via LinkedIn",
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -445,6 +493,9 @@ const SEED_APPS = [
     "salary_listed": "130-150",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -471,6 +522,9 @@ const SEED_APPS = [
     "salary_listed": "65-75",
     "salary_type": "Hourly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -497,6 +551,9 @@ const SEED_APPS = [
     "salary_listed": "140-160",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -523,6 +580,9 @@ const SEED_APPS = [
     "salary_listed": "130-150",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": 5
@@ -549,6 +609,9 @@ const SEED_APPS = [
     "salary_listed": "120-140",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": 6
@@ -575,6 +638,9 @@ const SEED_APPS = [
     "salary_listed": "140-160",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": 7
@@ -601,6 +667,9 @@ const SEED_APPS = [
     "salary_listed": "115-135",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": 8
@@ -627,6 +696,9 @@ const SEED_APPS = [
     "salary_listed": "125-145",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -653,6 +725,9 @@ const SEED_APPS = [
     "salary_listed": "135-155",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -679,6 +754,9 @@ const SEED_APPS = [
     "salary_listed": "",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -705,6 +783,9 @@ const SEED_APPS = [
     "salary_listed": "120-145",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -731,6 +812,9 @@ const SEED_APPS = [
     "salary_listed": "110-130",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -757,6 +841,9 @@ const SEED_APPS = [
     "salary_listed": "140-165",
     "salary_type": "Yearly",
     "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": null,
     "job_description": null,
     "timeline_id": 9
@@ -771,7 +858,7 @@ const SEED_TIMELINES = [
     "screener_name": "Jordan Lee",
     "screening_type": "Zoom",
     "pending": 1,
-    "date_rejected": null,
+    "date_closed": null,
     "application_id": 1
   },
   {
@@ -782,7 +869,7 @@ const SEED_TIMELINES = [
     "screener_name": "Jordan Lee",
     "screening_type": "Zoom",
     "pending": 1,
-    "date_rejected": null,
+    "date_closed": null,
     "application_id": 2
   },
   {
@@ -793,7 +880,7 @@ const SEED_TIMELINES = [
     "screener_name": "Jordan Lee",
     "screening_type": "MS Teams",
     "pending": 1,
-    "date_rejected": null,
+    "date_closed": null,
     "application_id": 3
   },
   {
@@ -803,8 +890,10 @@ const SEED_TIMELINES = [
     "date_screening": "2026-04-24",
     "screener_name": "Rachel Moore",
     "screening_type": "Phone",
+    "offer_date": "2026-05-22",
+    "offer_notes": "Base 138k, 10% bonus, 4 weeks PTO. Deadline June 20.",
     "pending": 1,
-    "date_rejected": null,
+    "date_closed": null,
     "application_id": 4
   },
   {
@@ -815,7 +904,7 @@ const SEED_TIMELINES = [
     "screener_name": null,
     "screening_type": "Zoom",
     "pending": 0,
-    "date_rejected": "2026-03-24",
+    "date_closed": "2026-03-24",
     "application_id": 20
   },
   {
@@ -826,7 +915,7 @@ const SEED_TIMELINES = [
     "screener_name": null,
     "screening_type": "Zoom",
     "pending": 0,
-    "date_rejected": "2026-02-20",
+    "date_closed": "2026-02-20",
     "application_id": 21
   },
   {
@@ -837,7 +926,7 @@ const SEED_TIMELINES = [
     "screener_name": null,
     "screening_type": "Zoom",
     "pending": 0,
-    "date_rejected": null,
+    "date_closed": null,
     "application_id": 22
   },
   {
@@ -848,7 +937,7 @@ const SEED_TIMELINES = [
     "screener_name": null,
     "screening_type": "Zoom",
     "pending": 0,
-    "date_rejected": null,
+    "date_closed": null,
     "application_id": 23
   },
   {
@@ -859,7 +948,7 @@ const SEED_TIMELINES = [
     "screener_name": null,
     "screening_type": "Zoom",
     "pending": 0,
-    "date_rejected": "2026-03-10",
+    "date_closed": "2026-03-10",
     "application_id": 29
   }
 ];
@@ -911,6 +1000,9 @@ const SEED_ROUNDS = [
     "interview_date": "2026-05-21",
     "interview_type": "Google Meet",
     "interviewer": "CTO, Product Lead",
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": "Deep dive on technical background",
     "is_final_round": 0
   },
@@ -921,6 +1013,9 @@ const SEED_ROUNDS = [
     "interview_date": "2026-05-27",
     "interview_type": "MS Teams",
     "interviewer": "Sr. PM, Engineering Manager",
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": "Deep dive on technical background",
     "is_final_round": 1
   },
@@ -931,6 +1026,9 @@ const SEED_ROUNDS = [
     "interview_date": "2026-04-30",
     "interview_type": "Zoom",
     "interviewer": "HR Screen",
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": "",
     "is_final_round": 0
   },
@@ -941,6 +1039,9 @@ const SEED_ROUNDS = [
     "interview_date": "2026-05-08",
     "interview_type": "Zoom",
     "interviewer": "VP Product",
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": "",
     "is_final_round": 0
   },
@@ -951,6 +1052,9 @@ const SEED_ROUNDS = [
     "interview_date": "2026-05-16",
     "interview_type": "Zoom",
     "interviewer": "CEO",
+    "cover_letter": 0,
+    "has_outreach": 1,
+    "outreach_notes": "Marcus Webb via LinkedIn",
     "notes": "",
     "is_final_round": 1
   },
@@ -961,6 +1065,9 @@ const SEED_ROUNDS = [
     "interview_date": "2026-02-19",
     "interview_type": "Zoom",
     "interviewer": "Hiring Manager",
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": "",
     "is_final_round": 0
   },
@@ -971,6 +1078,9 @@ const SEED_ROUNDS = [
     "interview_date": "2026-04-15",
     "interview_type": "Zoom",
     "interviewer": "Hiring Manager",
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
     "notes": "",
     "is_final_round": 0
   }
@@ -988,12 +1098,17 @@ function dAgo(n) {
 // ── Rewrite seed dates to relative offsets ────────────────────────────────────
 function initSeedDates() {
   [...SEED_APPS, ...SEED_TIMELINES].forEach(obj => {
-    ['date_applied','date_recruiter','date_screening','date_rejected'].forEach(k => {
+    ['date_applied','date_recruiter','date_screening','date_closed','offer_date'].forEach(k => {
       if (obj[k]) obj[k] = dAgo(0 + Math.round((new Date("2026-05-29") - new Date(obj[k])) / 86400000));
     });
   });
   SEED_ROUNDS.forEach(r => {
     if (r.interview_date) r.interview_date = dAgo(Math.round((new Date("2026-05-29") - new Date(r.interview_date)) / 86400000));
+  });
+  // Ensure v2 offer fields exist on all seed timeline entries
+  SEED_TIMELINES.forEach(tl => {
+    if (!('offer_date'  in tl)) tl.offer_date  = null;
+    if (!('offer_notes' in tl)) tl.offer_notes = null;
   });
 }
 initSeedDates();
@@ -1185,7 +1300,8 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
         date_recruiter: body.date_recruiter||null, recruiter_name: body.recruiter_name||null,
         date_screening: body.date_screening||null, screener_name: body.screener_name||null,
         screening_type: body.screening_type||null, pending: body.pending??1,
-        date_rejected: body.date_rejected||null });
+        date_closed: body.date_closed||null,
+        offer_date: body.offer_date||null, offer_notes: body.offer_notes||null });
     }
     saveState(s);
     return null;
@@ -1215,9 +1331,9 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
     if (app.timeline_id) {
       const tl = s.timelines.find(t=>t.id===app.timeline_id);
       if (tl) {
-        if (body.status === "Ghosted") { tl.pending=0; tl.date_rejected=null; }
-        else if (["Rejected","Not Selected","No Answer","Withdrawn","Accepted"].includes(body.status)) { tl.pending=0; tl.date_rejected=today; }
-        else if (["Interviewing","Offer","Applied"].includes(body.status)) { tl.pending=1; tl.date_rejected=null; }
+        if (body.status === "Ghosted") { tl.pending=0; tl.date_closed=null; }
+        else if (["Rejected","Not Selected","No Answer","Withdrawn","Accepted"].includes(body.status)) { tl.pending=0; tl.date_closed=today; }
+        else if (["Interviewing","Offer","Applied"].includes(body.status)) { tl.pending=1; tl.date_closed=null; }
       }
     } else if (body.status === "Interviewing") {
       _mockAutoCreateTimeline(s, app.id, today);
@@ -1236,6 +1352,7 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
         position: app?.job_title || "",
         rating: app?.rating || null,
         date_applied: app?.date_applied || null,
+        status: app?.status || null,
         via_recruiting_firm: app?.via_recruiting_firm||0,
         recruiting_firm: app?.recruiting_firm||null,
         rounds: rnds.map(r=>r.interview_date).filter(Boolean),
@@ -1251,7 +1368,8 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
     const app = s.apps.find(a=>a.id===tl.application_id);
     const rnds = s.rounds.filter(r=>r.timeline_id===tl.id).sort((a,b)=>a.round_order-b.round_order);
     return { ...tl, company: app?.company||"", position: app?.job_title||"",
-      rating: app?.rating||null, date_applied: app?.date_applied||null, rounds: rnds };
+      rating: app?.rating||null, date_applied: app?.date_applied||null,
+      status: app?.status||null, rounds: rnds };
   }
 
   // ── Timeline — update ──────────────────────────────────────────────────────
@@ -1263,7 +1381,8 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
       date_recruiter: body.date_recruiter||null, recruiter_name: body.recruiter_name||null,
       date_screening: body.date_screening||null, screener_name: body.screener_name||null,
       screening_type: body.screening_type||null, pending: body.pending??1,
-      date_rejected: body.date_rejected||null });
+      date_closed: body.date_closed||null,
+      offer_date: body.offer_date||null, offer_notes: body.offer_notes||null });
     saveState(s);
     return null;
   }
@@ -1323,7 +1442,8 @@ function _mockAutoCreateTimeline(state, appId, today=null) {
   const d = today || localToday();
   const tl = { id: state.nextTlId++, date_recruiter: d, recruiter_name: null,
     date_screening: null, screener_name: null, screening_type: null,
-    pending: 1, date_rejected: null, application_id: appId };
+    pending: 1, date_closed: null, offer_date: null, offer_notes: null,
+    application_id: appId };
   state.timelines.push(tl);
   app.timeline_id = tl.id;
 }

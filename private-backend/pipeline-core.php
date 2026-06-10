@@ -1,6 +1,6 @@
 <?php /* _pipeline-core.php — included by index.php. Never open directly. */ ?>
 // ── Constants & helpers ──────────────────────────────────────────────────────
-const COLORS  = { applied:"#94a3b8", recruiter:"#22d3ee", screening:"#818cf8", round:"#3b82f6", rejected:"#f87171", ghosted:"#fb7185", offer:"#4ade80", accepted:"#22c55e", withdrawn:"#64748b" };
+const COLORS  = { applied:"#94a3b8", recruiter:"#fbbf24", screening:"#818cf8", round:"#3b82f6", rejected:"#f87171", ghosted:"#fb7185", offer:"#4ade80", accepted:"#22c55e", withdrawn:"#64748b" };
 const LABEL_W = 195;
 const TODAY   = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
 const API     = "api.php";
@@ -594,7 +594,14 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
     return "—";
   };
   const displayFirmDot = a => a.via_recruiting_firm && a.recruiting_firm ? (
-    <span title={`Via: ${a.recruiting_firm}`} style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background:"#fbbf24", boxShadow:"0 0 4px #fbbf2480", marginLeft:5, verticalAlign:"middle", cursor:"default" }} />
+    <span title={`Via: ${a.recruiting_firm}`} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:16, height:16, marginLeft:2, verticalAlign:"middle", cursor:"help", flexShrink:0 }}>
+      <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background:"#fbbf24", boxShadow:"0 0 4px #fbbf2480" }} />
+    </span>
+  ) : null;
+  const displayOutreachDot = a => a.has_outreach ? (
+    <span title={a.outreach_notes ? `Outreach: ${a.outreach_notes}` : "Outreach performed"} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:16, height:16, marginLeft:2, verticalAlign:"middle", cursor:"help", flexShrink:0 }}>
+      <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background:"#3b82f6", boxShadow:"0 0 4px #3b82f680" }} />
+    </span>
   ) : null;
   const displaySalary  = a => {
     const val = a.salary_listed || "";
@@ -650,8 +657,8 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
                   const sc = SOURCE_COLORS[a.source];
                   return <span className="source-pill" style={sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}}>{a.source}</span>;
                 })() : "—"}</td>
-                <td>{a.applied_through || "—"}</td>
-                <td>{a.resume_version || "—"}</td>
+                <td>{a.applied_through || "—"}{displayOutreachDot(a)}</td>
+                <td>{a.resume_version || "—"}{a.cover_letter ? <span title="Cover letter added" style={{marginLeft:4,color:"var(--text-muted)",cursor:"help"}}><FileText size={13} /></span> : null}</td>
                 <td className="col-rating"><span className={a.rating>=65&&a.rating<80?"rating-badge-mid":""} style={{ display:"inline-block", fontSize:10, fontWeight:700, color:rc(a.rating), background:rb(a.rating), padding:"1px 5px", borderRadius:3 }}>{a.rating ?? "—"}</span></td>
                 <td>{displayLoc(a)}</td>
                 <td className="col-salary" title={salaryTooltip(a)}>{displaySalary(a) || "—"}</td>

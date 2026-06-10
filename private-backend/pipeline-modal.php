@@ -87,6 +87,7 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
     status:"Applied", job_id:"", job_link:"", dashboard_link:"",
     salary_requested:"", salary_listed:"", salary_type:"Yearly",
     contacts:"", notes:"", job_description:"",
+    cover_letter:false, has_outreach:false, outreach_notes:"",
   });
   const [form, setForm] = useState(emptyForm());
   const sf = (k,v) => setForm(f=>({...f,[k]:v}));
@@ -150,6 +151,7 @@ const STATUS_TO_TL = {
         salary_requested:a.salary_requested||"", salary_listed:a.salary_listed||"",
         salary_type:a.salary_type||"Yearly", contacts:a.contacts||"",
         notes:a.notes||"", job_description:a.job_description||"",
+        cover_letter:!!a.cover_letter, has_outreach:!!a.has_outreach, outreach_notes:a.outreach_notes||"",
       });
       if (d.timeline) {
         const t = d.timeline;
@@ -185,7 +187,7 @@ const STATUS_TO_TL = {
   const save = async () => {
     setSaving(true);
     try {
-      const body = {...form, via_recruiting_firm:form.via_recruiting_firm?1:0};
+      const body = {...form, via_recruiting_firm:form.via_recruiting_firm?1:0, cover_letter:form.cover_letter?1:0, has_outreach:form.has_outreach?1:0};
       if (isNew) {
         const res = await api("application_add","POST",body);
         onSaved&&onSaved(res.id);
@@ -435,6 +437,29 @@ const STATUS_TO_TL = {
                   </FormField>
                 </div>
               </div>
+
+              {/* Cover letter & Outreach */}
+              {(editing||isNew) && (
+                <div style={{ marginBottom:12 }}>
+                  <label className="form-checkbox-label">
+                    <input type="checkbox" checked={form.cover_letter} onChange={e=>sf("cover_letter",e.target.checked)} />
+                    Cover letter included
+                  </label>
+                  <label className="form-checkbox-label" style={{ marginTop:6 }}>
+                    <input type="checkbox" checked={form.has_outreach} onChange={e=>{ sf("has_outreach",e.target.checked); if(!e.target.checked) sf("outreach_notes",""); }} />
+                    Outreach performed
+                  </label>
+                  {form.has_outreach && (
+                    <input className="form-input" style={{ marginTop:6 }} value={form.outreach_notes} onChange={e=>sf("outreach_notes",e.target.value)} placeholder="Name(s) and channel — e.g. Jane Smith via LinkedIn" />
+                  )}
+                </div>
+              )}
+              {!editing && !isNew && (form.cover_letter || form.has_outreach) && (
+                <div style={{ marginBottom:12,fontSize:12,color:"var(--text-secondary)" }}>
+                  {form.cover_letter && <div>✓ Cover letter included</div>}
+                  {form.has_outreach && <div>✓ Outreach{form.outreach_notes ? ` — ${form.outreach_notes}` : ""}</div>}
+                </div>
+              )}
 
               {/* Details */}
               <div className="modal-section">

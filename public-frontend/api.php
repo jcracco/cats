@@ -264,7 +264,8 @@ if ($action === 'applications') {
                     a.job_title, a.location_type, a.hybrid_location, a.days_onsite,
                     a.source, a.applied_through, a.resume_version, a.rating, a.status,
                     a.salary_requested, a.salary_listed, a.salary_type,
-                    a.job_link, a.dashboard_link, a.job_id, a.timeline_id"
+                    a.job_link, a.dashboard_link, a.job_id, a.timeline_id,
+                    a.cover_letter, a.has_outreach, a.outreach_notes"
          . ($is_auth ? ", a.contacts" : "")
          . " FROM applications a WHERE " . implode(' AND ', $where)
          . " ORDER BY $group_order, $sort_sql";
@@ -312,8 +313,9 @@ if ($action === 'application_add') {
         (date_applied,company,via_recruiting_firm,recruiting_firm,job_title,
          location_type,hybrid_location,days_onsite,source,applied_through,
          resume_version,rating,status,job_id,job_link,dashboard_link,
-         salary_requested,salary_listed,salary_type,contacts,notes,job_description)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+         salary_requested,salary_listed,salary_type,contacts,notes,job_description,
+         cover_letter,has_outreach,outreach_notes)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
         str_or_null($b,'company'), (int)($b['via_recruiting_firm']??0), str_or_null($b,'recruiting_firm'),
@@ -323,6 +325,7 @@ if ($action === 'application_add') {
         str_or_null($b,'job_id'), str_or_null($b,'job_link'), str_or_null($b,'dashboard_link'),
         str_or_null($b,'salary_requested'), str_or_null($b,'salary_listed'), $b['salary_type']??'Yearly',
         str_or_null($b,'contacts'), str_or_null($b,'notes'), str_or_null($b,'job_description'),
+        int_or_null($b,'cover_letter'), int_or_null($b,'has_outreach'), str_or_null($b,'outreach_notes'),
     ]);
     $new_id = (int)$pdo->lastInsertId();
     if (($b['status']??'') === 'Interviewing') _auto_create_timeline($pdo, $new_id, $b);
@@ -340,7 +343,8 @@ if ($action === 'application_update') {
         date_applied=?,company=?,via_recruiting_firm=?,recruiting_firm=?,job_title=?,
         location_type=?,hybrid_location=?,days_onsite=?,source=?,applied_through=?,
         resume_version=?,rating=?,status=?,job_id=?,job_link=?,dashboard_link=?,
-        salary_requested=?,salary_listed=?,salary_type=?,contacts=?,notes=?,job_description=?
+        salary_requested=?,salary_listed=?,salary_type=?,contacts=?,notes=?,job_description=?,
+        cover_letter=?,has_outreach=?,outreach_notes=?
         WHERE id=?");
     $stmt->execute([
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
@@ -351,6 +355,7 @@ if ($action === 'application_update') {
         str_or_null($b,'job_id'), str_or_null($b,'job_link'), str_or_null($b,'dashboard_link'),
         str_or_null($b,'salary_requested'), str_or_null($b,'salary_listed'), $b['salary_type']??'Yearly',
         str_or_null($b,'contacts'), str_or_null($b,'notes'), str_or_null($b,'job_description'),
+        int_or_null($b,'cover_letter'), int_or_null($b,'has_outreach'), str_or_null($b,'outreach_notes'),
         $id,
     ]);
     if (($b['status']??'') === 'Interviewing' && !$current['timeline_id'])
