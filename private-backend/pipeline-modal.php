@@ -732,6 +732,209 @@ const STATUS_TO_TL = {
   );
 }
 
+// ── ExportModal ───────────────────────────────────────────────────────────────
+function ExportModal({ onClose }) {
+  const EXPORT_FIELDS = [
+    { key:'status',              label:'Status' },
+    { key:'via_recruiting_firm', label:'Via Recruiting Firm' },
+    { key:'recruiting_firm',     label:'Recruiting Firm' },
+    { key:'location',            label:'Location' },
+    { key:'days_onsite',         label:'Days Onsite' },
+    { key:'source',              label:'Source' },
+    { key:'applied_through',     label:'Applied Through' },
+    { key:'resume_version',      label:'Resume Version' },
+    { key:'rating',              label:'Rating' },
+    { key:'job_id',              label:'Job ID' },
+    { key:'job_link',            label:'Job Link' },
+    { key:'dashboard_link',      label:'Dashboard Link' },
+    { key:'salary_listed',       label:'Salary Listed' },
+    { key:'salary_requested',    label:'Salary Requested' },
+    { key:'salary_type',         label:'Salary Type' },
+    { key:'cover_letter',        label:'Cover Letter' },
+    { key:'has_outreach',        label:'Outreach' },
+    { key:'outreach_notes',      label:'Outreach Notes' },
+    { key:'contacts',            label:'Contacts' },
+    { key:'notes',               label:'Notes' },
+    { key:'job_description',     label:'Job Description' },
+  ];
+
+  const [fields, setFields]       = useState(()=>Object.fromEntries(EXPORT_FIELDS.map(f=>[f.key,true])));
+  const [dateFrom, setDateFrom]   = useState(null);
+  const [dateTo,   setDateTo]     = useState(null);
+  const [fullExport, setFullExport] = useState(false);
+  const [busy, setBusy]           = useState(false);
+
+  useEffect(()=>{
+    const h = e => { if (e.key==='Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, []);
+
+  const toggleField = key => setFields(f=>({...f,[key]:!f[key]}));
+
+  const doExport = async () => {
+    setBusy(true);
+    try {
+      const params = {};
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo)   params.date_to   = dateTo;
+      const apps = await api('export', 'GET', null, params);
+
+      const csvCell = v => {
+        if (v===null||v===undefined) return '';
+        const s = String(v);
+        if (/[,"\n\r]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+        return s;
+      };
+
+      const headers = ['Date Applied','Company','Job Title'];
+      EXPORT_FIELDS.forEach(f=>{ if (fields[f.key]) headers.push(f.label); });
+
+      let maxRounds = 0;
+      if (fullExport) {
+        headers.push('Recruiter Date','Recruiter Name','Screening Date','Screener Name',
+          'Screening Type','Offer Date','Offer Notes','Closed Date');
+        maxRounds = apps.reduce((m,a)=>Math.max(m,(a.rounds||[]).length), 0);
+        for (let i=1; i<=maxRounds; i++)
+          headers.push(`Round ${i} Date`,`Round ${i} Type`,`Round ${i} Interviewer`);
+      }
+
+      const rows = apps.map(a => {
+        const loc = a.location_type==='Hybrid'
+          ? `Hybrid${a.hybrid_location?` — ${a.hybrid_location}`:''}`
+          : (a.location_type||'Remote');
+
+        const row = [a.date_applied||'', (a.company||a.recruiting_firm)||'', a.job_title||''];
+        EXPORT_FIELDS.forEach(f => {
+          if (!fields[f.key]) return;
+          switch (f.key) {
+            case 'via_recruiting_firm': row.push(a.via_recruiting_firm?'Yes':'No'); break;
+            case 'cover_letter':        row.push(a.cover_letter?'Yes':'No'); break;
+            case 'has_outreach':        row.push(a.has_outreach?'Yes':'No'); break;
+            case 'location':            row.push(loc); break;
+            default:                    row.push(a[f.key]??'');
+          }
+        });
+
+        if (fullExport) {
+          row.push(
+            a.date_recruiter||'', a.recruiter_name||'',
+            a.date_screening||'', a.screener_name||'',
+            a.screening_type||'', a.offer_date||'',
+            a.offer_notes||'',    a.date_closed||''
+          );
+          for (let i=0; i<maxRounds; i++) {
+            const r = (a.rounds||[])[i]||{};
+            row.push(r.interview_date||'', r.interview_type||'', r.interviewer||'');
+          }
+        }
+
+        return row.map(csvCell).join(',');
+      });
+
+      const csv = [headers.map(csvCell).join(','), ...rows].join('\r\n');
+      const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = `cats_export_${localToday()}.csv`;
+      document.body.appendChild(link); link.click();
+      document.body.removeChild(link); URL.revokeObjectURL(url);
+      onClose();
+    } catch(e) { alert('Export failed: '+e.message); }
+    setBusy(false);
+  };
+
+  return (
+    <>
+      <div className="modal-backdrop" onClick={onClose}
+        style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500 }} />
+      <div style={{ position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',
+        width:500,maxHeight:'82vh',display:'flex',flexDirection:'column',
+        background:'var(--modal-bg)',border:'1px solid var(--border)',
+        borderRadius:12,zIndex:501,boxShadow:'0 24px 80px rgba(0,0,0,0.8)' }}>
+
+        {/* Header */}
+        <div style={{ padding:'20px 24px 16px',borderBottom:'1px solid var(--border)',flexShrink:0,
+          display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+          <h2 style={{ fontSize:16,fontWeight:700,color:'var(--text-primary)' }}>Export to CSV</h2>
+          <button onClick={onClose} style={{ background:'none',border:'none',color:'var(--text-muted)',fontSize:20,cursor:'pointer',lineHeight:1,padding:'0 4px' }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ overflowY:'auto',padding:'20px 24px',flex:1,display:'flex',flexDirection:'column',gap:18 }}>
+
+          {/* Date range */}
+          <div>
+            <div style={{ fontSize:10,letterSpacing:2,color:'var(--text-muted)',textTransform:'uppercase',marginBottom:8,fontWeight:600 }}>Date Range (Applied)</div>
+            <DateRangePicker dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} />
+          </div>
+
+          {/* Export type */}
+          <div>
+            <div style={{ fontSize:10,letterSpacing:2,color:'var(--text-muted)',textTransform:'uppercase',marginBottom:8,fontWeight:600 }}>Export Type</div>
+            <div style={{ display:'flex',gap:8 }}>
+              {[[false,'Applications only'],[true,'Full export (includes timeline & rounds)']].map(([val,lbl])=>(
+                <button key={String(val)} onClick={()=>setFullExport(val)}
+                  style={{ padding:'6px 14px',borderRadius:6,fontSize:11,cursor:'pointer',fontFamily:'inherit',transition:'all 0.12s',
+                    border:`1px solid ${fullExport===val?'#3b82f6':'var(--border)'}`,
+                    background:fullExport===val?'rgba(59,130,246,0.12)':'transparent',
+                    color:fullExport===val?'#60a5fa':'var(--text-secondary)' }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Fields */}
+          <div>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8 }}>
+              <div style={{ fontSize:10,letterSpacing:2,color:'var(--text-muted)',textTransform:'uppercase',fontWeight:600 }}>Fields</div>
+              <div style={{ display:'flex',gap:8 }}>
+                <button onClick={()=>setFields(Object.fromEntries(EXPORT_FIELDS.map(f=>[f.key,true])))}
+                  style={{ background:'none',border:'none',color:'var(--text-muted)',fontSize:10,cursor:'pointer',letterSpacing:1,padding:'2px 4px' }}>ALL</button>
+                <button onClick={()=>setFields(Object.fromEntries(EXPORT_FIELDS.map(f=>[f.key,false])))}
+                  style={{ background:'none',border:'none',color:'var(--text-muted)',fontSize:10,cursor:'pointer',letterSpacing:1,padding:'2px 4px' }}>NONE</button>
+              </div>
+            </div>
+            {/* Mandatory — always on */}
+            <div style={{ marginBottom:8 }}>
+              {['Date Applied','Company','Job Title'].map(lbl=>(
+                <label key={lbl} style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'3px 8px',borderRadius:4,
+                  fontSize:11,marginRight:4,marginBottom:4,opacity:0.55,cursor:'not-allowed',
+                  background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.2)',color:'#93c5fd' }}>
+                  <input type="checkbox" checked disabled style={{ cursor:'not-allowed' }} />
+                  {lbl}
+                </label>
+              ))}
+            </div>
+            {/* Optional fields */}
+            <div style={{ display:'flex',flexWrap:'wrap',gap:4 }}>
+              {EXPORT_FIELDS.map(f=>(
+                <label key={f.key} style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'3px 8px',borderRadius:4,
+                  fontSize:11,cursor:'pointer',transition:'all 0.1s',
+                  background:fields[f.key]?'rgba(59,130,246,0.10)':'transparent',
+                  border:`1px solid ${fields[f.key]?'rgba(59,130,246,0.3)':'var(--border)'}`,
+                  color:fields[f.key]?'#93c5fd':'var(--text-secondary)' }}>
+                  <input type="checkbox" checked={!!fields[f.key]} onChange={()=>toggleField(f.key)} style={{ cursor:'pointer' }} />
+                  {f.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding:'14px 24px',borderTop:'1px solid var(--border)',display:'flex',gap:10,flexShrink:0 }}>
+          <button className="btn-primary" style={{ flex:1,padding:'10px 0',fontSize:13 }} onClick={doExport} disabled={busy}>
+            {busy?'Exporting…':'Export CSV'}
+          </button>
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── TimelineModal — kept for direct timeline add (no linked application) ──────
 function TimelineModal({ entryId, isNew, onClose, onSaved, onDeleted }) {
   const [form, setForm]     = useState({ date_recruiter:"", date_screening:"", pending:true, date_closed:"" });

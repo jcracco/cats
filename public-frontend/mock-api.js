@@ -1429,6 +1429,28 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
     return null;
   }
 
+  // ── Export ────────────────────────────────────────────────────────────────
+  if (action === "export") {
+    let apps = [...s.apps];
+    if (params.date_from) apps = apps.filter(a=>a.date_applied >= params.date_from);
+    if (params.date_to)   apps = apps.filter(a=>a.date_applied <= params.date_to);
+    apps.sort((a,b)=>a.date_applied.localeCompare(b.date_applied));
+    return apps.map(a => {
+      const tl = a.timeline_id ? s.timelines.find(t=>t.id===a.timeline_id) : null;
+      const rounds = tl
+        ? s.rounds.filter(r=>r.timeline_id===tl.id).sort((a,b)=>a.round_order-b.round_order)
+            .map(r=>({ interview_date:r.interview_date, interview_type:r.interview_type, interviewer:r.interviewer }))
+        : [];
+      return { ...a,
+        date_recruiter: tl?.date_recruiter||null, recruiter_name: tl?.recruiter_name||null,
+        date_screening: tl?.date_screening||null, screener_name: tl?.screener_name||null,
+        screening_type: tl?.screening_type||null, offer_date: tl?.offer_date||null,
+        offer_notes:    tl?.offer_notes||null,    date_closed:  tl?.date_closed||null,
+        rounds,
+      };
+    });
+  }
+
   // ── Migration (no-op in demo) ──────────────────────────────────────────────
   if (action === "run_migration") return { workday_links_moved: 0, linkedin_consolidated: 0 };
 

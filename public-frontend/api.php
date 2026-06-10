@@ -28,6 +28,8 @@
  *   POST   ?action=round_delete&id=N
  *
  *   GET    ?action=stats
+ *
+ *   GET    ?action=export[&date_from=&date_to=]
  */
 
 require_once __DIR__ . '/bootstrap.php';
@@ -522,6 +524,44 @@ if ($action === 'run_migration') {
     $results['linkedin_consolidated'] = $stmt->rowCount();
 
     ok($results);
+}
+
+// ── Export — full data with timeline and rounds ───────────────────────────────
+if ($action === 'export') {
+    auth_required();
+    $pdo    = db();
+    $uid    = current_user_id();
+    $where  = ['a.user_id = ?'];
+    $params = [$uid];
+
+    $date_from = trim($_GET['date_from'] ?? '');
+    $date_to   = trim($_GET['date_to']   ?? '');
+    if ($date_from) { $where[] = "a.date_applied >= ?"; $params[] = $date_from; }
+    if ($date_to)   { $where[] = "a.date_applied <= ?"; $params[] = $date_to; }
+
+    $stmt = $pdo->prepare("
+        SELECT a.*,
+               t.date_recruiter, t.recruiter_name, t.date_screening, t.screener_name,
+               t.screening_type, t.offer_date, t.offer_notes, t.date_closed
+        FROM applications a
+        LEFT JOIN timeline_entries t ON a.timeline_id = t.id
+        WHERE " . implode(' AND ', $where) . "
+        ORDER BY a.date_applied ASC, a.id ASC
+    ");
+    $stmt->execute($params);
+    $apps = $stmt->fetchAll();
+
+    foreach ($apps as &$app) {
+        $rounds = [];
+        if ($app['timeline_id']) {
+            $rs = $pdo->prepare("SELECT interview_date, interview_type, interviewer FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
+            $rs->execute([$app['timeline_id']]);
+            $rounds = $rs->fetchAll();
+        }
+        $app['rounds'] = $rounds;
+    }
+    unset($app);
+    ok($apps);
 }
 
 // ── Auto-create timeline helper ───────────────────────────────────────────────
