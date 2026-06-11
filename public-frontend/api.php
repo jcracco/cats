@@ -30,6 +30,10 @@
  *   GET    ?action=stats
  *
  *   GET    ?action=export[&date_from=&date_to=]
+ *
+ *   POST   ?action=generate_share_token
+ *   POST   ?action=revoke_share_token
+ *   GET    ?action=share&token=T[&slim=1]
  */
 
 require_once __DIR__ . '/bootstrap.php';
@@ -115,10 +119,10 @@ function int_or_null(array $data, string $key): ?int {
 
 $action = $_GET['action'] ?? '';
 
-// ── Require authentication for all actions except session + login ─────────────
+// ── Require authentication for all actions except session + login + share ──────
 // Demo domain is already blocked above — this protects production from
 // unauthenticated access to any data endpoint
-if (!in_array($action, ['session', 'login']) && !is_authenticated()) {
+if (!in_array($action, ['session', 'login', 'share']) && !is_authenticated()) {
     fail('Not authenticated', 401);
 }
 
@@ -144,10 +148,10 @@ if ($action === 'logout') {
 if ($action === 'session') {
     $t = _current_token_data();
     if (!$t) { ok(['auth' => false]); }
-    $stmt = db()->prepare("SELECT username, is_admin FROM users WHERE id = ?");
+    $stmt = db()->prepare("SELECT username, is_admin, share_token FROM users WHERE id = ?");
     $stmt->execute([$t['user_id'] ?? 0]);
     $user = $stmt->fetch();
-    ok(['auth' => true, 'username' => $user['username'] ?? null, 'is_admin' => (bool)($user['is_admin'] ?? false)]);
+    ok(['auth' => true, 'username' => $user['username'] ?? null, 'is_admin' => (bool)($user['is_admin'] ?? false), 'share_token' => $user['share_token'] ?? null]);
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -524,6 +528,64 @@ if ($action === 'run_migration') {
     $results['linkedin_consolidated'] = $stmt->rowCount();
 
     ok($results);
+}
+
+// ── Share — generate token ────────────────────────────────────────────────────
+if ($action === 'generate_share_token') {
+    auth_required();
+    $token = bin2hex(random_bytes(32));
+    db()->prepare("UPDATE users SET share_token=? WHERE id=?")->execute([$token, current_user_id()]);
+    ok(['token' => $token]);
+}
+
+// ── Share — revoke token ──────────────────────────────────────────────────────
+if ($action === 'revoke_share_token') {
+    auth_required();
+    db()->prepare("UPDATE users SET share_token=NULL WHERE id=?")->execute([current_user_id()]);
+    ok();
+}
+
+// ── Share — public read-only view ─────────────────────────────────────────────
+if ($action === 'share') {
+    $token = trim($_GET['token'] ?? '');
+    if (!$token) fail('Missing token', 400);
+
+    $pdo  = db();
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE share_token = ?");
+    $stmt->execute([$token]);
+    $user = $stmt->fetch();
+    if (!$user) fail('Invalid token', 403);
+    $uid = (int)$user['id'];
+
+    $slim = !empty($_GET['slim']);
+    $cols = $slim
+        ? "a.id,a.date_applied,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.hybrid_location,a.days_onsite,a.source,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.notes,a.timeline_id"
+        : "a.*";
+
+    $stmt = $pdo->prepare("
+        SELECT $cols,
+               t.date_recruiter, t.recruiter_name, t.date_screening, t.screener_name,
+               t.screening_type, t.offer_date, t.offer_notes, t.date_closed, t.pending
+        FROM applications a
+        LEFT JOIN timeline_entries t ON a.timeline_id = t.id
+        WHERE a.user_id = ?
+        ORDER BY a.date_applied ASC, a.id ASC
+    ");
+    $stmt->execute([$uid]);
+    $apps = $stmt->fetchAll();
+
+    foreach ($apps as &$app) {
+        $rounds = [];
+        if ($app['timeline_id']) {
+            $rs = $pdo->prepare("SELECT interview_date, interview_type, interviewer FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
+            $rs->execute([$app['timeline_id']]);
+            $rounds = $rs->fetchAll();
+        }
+        $app['rounds'] = $rounds;
+        unset($app['contacts']); // never expose contacts in shared view
+    }
+    unset($app);
+    ok($apps);
 }
 
 // ── Export — full data with timeline and rounds ───────────────────────────────

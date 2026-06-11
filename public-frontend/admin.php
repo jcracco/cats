@@ -134,10 +134,21 @@ $users = $db->query('SELECT id, username, is_admin, created_at FROM users ORDER 
         .inline-form input { margin: 0; flex: 1; padding: 6px 8px; }
         .del-hint { font-size: 12px; color: #888; margin-bottom: 6px; }
         .del-hint strong { color: #cc8888; }
+        .admin-nav { display: flex; gap: 8px; margin: 12px 0 28px; }
+        .btn-back    { background: #1a1a1a; color: #aaa; border: 1px solid #333; }
+        .btn-back:hover    { color: #e0e0e0; border-color: #555; }
+        .btn-signout { background: #3f1a1a; color: #ff6b6b; border: 1px solid #6b2a2a; }
+        .btn-signout:hover { background: #5f2a2a; }
     </style>
 </head>
 <body>
     <h1>CATS Admin</h1>
+    <div class="admin-nav">
+        <a href="index.php" class="btn btn-sm btn-back">← Back to App</a>
+        <?php if (!$via_token): ?>
+        <button type="button" class="btn btn-sm btn-signout" onclick="signOut()">Sign Out</button>
+        <?php endif; ?>
+    </div>
 
     <?php if ($error):   ?><p class="msg error"><?= htmlspecialchars($error) ?></p><?php endif; ?>
     <?php if ($success): ?><p class="msg success"><?= htmlspecialchars($success) ?></p><?php endif; ?>
@@ -241,6 +252,11 @@ $users = $db->query('SELECT id, username, is_admin, created_at FROM users ORDER 
         function checkDel(id, expected) {
             const input = document.getElementById('del-input-' + id);
             document.getElementById('del-btn-' + id).disabled = (input.value !== expected);
+        }
+
+        function signOut() {
+            fetch('api.php?action=logout', { method: 'POST' })
+                .finally(() => { window.location.href = 'index.php'; });
         }
     </script>
 </body>

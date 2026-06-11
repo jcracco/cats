@@ -784,6 +784,84 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
   );
 }
 
+// ── Shared Apps View (public read-only, client-side stats, no auth) ──────────
+function SharedAppsView({ allApps }) {
+  const stats = useMemo(() => {
+    const total = allApps.length;
+    if (!total) return null;
+    const active            = allApps.filter(a=>['Interviewing','Offer'].includes(a.status)).length;
+    const reached_recruiter = allApps.filter(a=>a.date_recruiter).length;
+    const ratings           = allApps.filter(a=>a.rating!=null).map(a=>a.rating);
+    const avg_rating        = ratings.length ? Math.round(ratings.reduce((s,r)=>s+r,0)/ratings.length*10)/10 : null;
+    const closed_positive   = allApps.filter(a=>a.status==='Accepted').length;
+    const closed_reached    = allApps.filter(a=>['Rejected','Ghosted'].includes(a.status)).length;
+    const closed_no_prog    = allApps.filter(a=>['Not Selected','No Answer','Withdrawn'].includes(a.status)).length;
+    const todayStr          = localToday();
+    const wkStart           = (()=>{ const d=new Date(); const day=d.getDay(); d.setDate(d.getDate()-(day===0?6:day-1)); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+    const moStart           = todayStr.slice(0,7)+'-01';
+    const this_week         = allApps.filter(a=>a.date_applied>=wkStart).length;
+    const this_month        = allApps.filter(a=>a.date_applied>=moStart).length;
+    const first             = allApps.reduce((m,a)=>(!m||a.date_applied<m)?a.date_applied:m, null);
+    const msElapsed         = first ? Math.max(0, new Date()-new Date(first)) : 0;
+    const avg_week          = msElapsed ? Math.round(total/Math.max(1,msElapsed/604800000)*10)/10 : null;
+    const avg_month         = msElapsed ? Math.round(total/Math.max(1,msElapsed/2629800000)*10)/10 : null;
+    return { total, active, reached_recruiter, reached_final_round:0, avg_rating, closed_positive, closed_reached, closed_no_prog, this_week, this_month, avg_week, avg_month };
+  }, [allApps]);
+
+  return (
+    <div>
+      <AppStatsBar stats={stats} />
+      <AppTable apps={allApps} grouped={true} />
+    </div>
+  );
+}
+
+// ── Shared Timeline View (read-only, no auth, derives data from share API) ───
+function SharedTimelineView({ allApps }) {
+  const entries = useMemo(() =>
+    allApps
+      .filter(a => a.timeline_id)
+      .map(a => ({
+        id:             a.timeline_id,
+        company:        (a.company && a.company.trim()) ? a.company : (a.recruiting_firm || ""),
+        position:       a.job_title,
+        rating:         a.rating,
+        applied:        a.date_applied,
+        recruiter:      a.date_recruiter,
+        screening:      a.date_screening,
+        rejected:       a.date_closed,
+        offer_date:     a.offer_date || null,
+        status:         a.status,
+        pending:        !!a.pending,
+        rounds:         (a.rounds || []).map(r => r.interview_date).filter(Boolean),
+        rounds_full:    a.rounds || [],
+        application_id: a.id,
+      }))
+  , [allApps]);
+
+  const [hovered, setHov]   = useState(null);
+  const [tipPos, setTipPos] = useState({x:0,y:0});
+
+  if (!entries.length) return <div className="empty-state">No timeline entries in shared data.</div>;
+
+  const sorted = [...entries].sort((a,b)=>pd(a.applied)-pd(b.applied));
+  const { toX, monthLabels, zones } = buildTimelineData(sorted);
+  const hoveredItem = sorted.find(i=>i.id===hovered)||null;
+  const todayStr = TODAY.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+
+  return (
+    <div>
+      <TimelineStatsRow sorted={sorted} zones={zones} totalApps={allApps.length} />
+      <PipelineGrid sorted={sorted} hovered={hovered} setHov={setHov} tipPos={tipPos} setTipPos={setTipPos} zones={zones} toX={toX} monthLabels={monthLabels} onRowClick={null} onLinkClick={null} />
+      {hoveredItem && <TimelineTooltip item={hoveredItem} tipPos={tipPos} />}
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, marginTop:20 }}>
+        <Legend showEditHint={false} />
+        <div style={{ fontSize:11, color:"var(--text-dim)", whiteSpace:"nowrap", paddingTop:10 }}>{todayStr}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── Timeline Tab ──────────────────────────────────────────────────────────────
 function TimelineTab({ isAuth, onRowClick, onLinkClick, refreshKey }) {
   const [entries, setEntries]   = useState([]);

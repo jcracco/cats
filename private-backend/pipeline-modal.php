@@ -23,8 +23,8 @@ function LoginModal({ onSuccess, onClose, hint=null }) {
 
   return (
     <>
-      <div className="modal-backdrop" onClick={onClose} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:500 }} />
-      <div className="login-modal" style={{ zIndex:501 }}>
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="login-modal">
         <div style={{ fontSize:10,letterSpacing:5,color:"var(--eyebrow)",textTransform:"uppercase",fontWeight:600,marginBottom:8 }}>CATS</div>
         <h2 style={{ fontSize:20,fontWeight:700,color:"var(--text-primary)",marginBottom:16 }}>Login</h2>
         {hint}
@@ -36,7 +36,7 @@ function LoginModal({ onSuccess, onClose, hint=null }) {
         </FormField>
         {err && <div style={{ fontSize:11,color:"#f87171",marginBottom:10 }}>{err}</div>}
         <div className="modal-actions">
-          <button className="btn-primary" style={{ flex:1,padding:"10px 0",fontSize:13 }} onClick={submit} disabled={busy}>
+          <button className="btn-primary" onClick={submit} disabled={busy}>
             {busy?"Checking…":"Login"}
           </button>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -51,15 +51,15 @@ function DeleteConfirm({ label, onConfirm, onCancel }) {
   const [val, setVal] = useState("");
   return (
     <>
-      <div className="modal-backdrop" onClick={onCancel} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:600 }} />
-      <div style={{ position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:340,background:"var(--modal-bg)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:12,padding:28,zIndex:601,boxShadow:"0 24px 80px rgba(0,0,0,0.8)" }}>
-        <h3 style={{ color:"#f87171",fontSize:15,marginBottom:8 }}>Delete {label}?</h3>
-        <p style={{ fontSize:12,color:"var(--text-muted)",marginBottom:16,lineHeight:1.6 }}>
+      <div className="modal-backdrop" onClick={onCancel} style={{ background:"rgba(0,0,0,0.7)",zIndex:600 }} />
+      <div className="delete-confirm">
+        <h3 className="delete-confirm-title">Delete {label}?</h3>
+        <p className="delete-confirm-desc">
           This will permanently delete this entry and all linked data. Type <strong style={{ color:"var(--text-primary)" }}>DELETE</strong> to confirm.
         </p>
         <input className="form-input" value={val} onChange={e=>setVal(e.target.value)} placeholder="Type DELETE" style={{ marginBottom:14 }} />
         <div className="modal-actions">
-          <button className="btn-danger" style={{ flex:1 }} disabled={val!=="DELETE"} onClick={onConfirm}>Delete</button>
+          <button className="btn-danger" disabled={val!=="DELETE"} onClick={onConfirm}>Delete</button>
           <button className="btn-secondary" onClick={onCancel}>Cancel</button>
         </div>
       </div>
@@ -249,16 +249,16 @@ const STATUS_TO_TL = {
 
   if (busy) return (
     <>
-      <div className="modal-backdrop" onClick={onClose} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:500 }} />
+      <div className="modal-backdrop" onClick={onClose} />
       <div className="app-modal modal-fixed-height" style={{ display:"flex",alignItems:"center",justifyContent:"center" }}>
-        <span style={{ color:"var(--text-muted)",fontSize:12,letterSpacing:2 }}>LOADING…</span>
+        <span className="muted">LOADING…</span>
       </div>
     </>
   );
 
   return (
     <>
-      <div className="modal-backdrop" onClick={onClose} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:500 }} />
+      <div className="modal-backdrop" onClick={onClose} />
       <div className="app-modal modal-fixed-height">
 
         {/* Header — fixed, never scrolls */}
@@ -272,7 +272,7 @@ const STATUS_TO_TL = {
           <div style={{ display:"flex",gap:8,alignItems:"center" }}>
             {isAuth && !isNew && !editing && <button className="btn-secondary" style={{ fontSize:11,padding:"5px 10px",letterSpacing:0.5 }} onClick={()=>setEditing(true)}>Edit</button>}
             {isAuth && !isNew && <button className="btn-danger" style={{ fontSize:11,padding:"5px 10px",letterSpacing:0.5 }} onClick={()=>setDelConf(true)}>Delete</button>}
-            <button onClick={onClose} style={{ background:"none",border:"none",color:"var(--text-muted)",fontSize:20,cursor:"pointer",lineHeight:1,padding:"0 4px" }}>✕</button>
+            <button className="modal-close" onClick={onClose}>✕</button>
           </div>
         </div>
 
@@ -719,7 +719,7 @@ const STATUS_TO_TL = {
         {/* Sticky footer — save/cancel, visible in edit mode regardless of active tab */}
         {(editing || isNew) && (
           <div className="modal-footer">
-            <button className="btn-primary" style={{ flex:1, padding:"10px 0", fontSize:13 }} onClick={save} disabled={saving}>
+            <button className="btn-primary" onClick={save} disabled={saving}>
               {saving ? "Saving…" : (isNew ? "Add Application" : "Save Changes")}
             </button>
             {!isNew && <button className="btn-secondary" onClick={()=>setEditing(false)}>Cancel</button>}
@@ -846,32 +846,27 @@ function ExportModal({ onClose }) {
 
   return (
     <>
-      <div className="modal-backdrop" onClick={onClose}
-        style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500 }} />
-      <div style={{ position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',
-        width:500,maxHeight:'82vh',display:'flex',flexDirection:'column',
-        background:'var(--modal-bg)',border:'1px solid var(--border)',
-        borderRadius:12,zIndex:501,boxShadow:'0 24px 80px rgba(0,0,0,0.8)' }}>
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="export-modal">
 
         {/* Header */}
-        <div style={{ padding:'20px 24px 16px',borderBottom:'1px solid var(--border)',flexShrink:0,
-          display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-          <h2 style={{ fontSize:16,fontWeight:700,color:'var(--text-primary)' }}>Export to CSV</h2>
-          <button onClick={onClose} style={{ background:'none',border:'none',color:'var(--text-muted)',fontSize:20,cursor:'pointer',lineHeight:1,padding:'0 4px' }}>✕</button>
+        <div className="modal-sm-header" style={{ flexShrink:0 }}>
+          <h2 className="modal-sm-title">Export to CSV</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
         {/* Body */}
-        <div style={{ overflowY:'auto',padding:'20px 24px',flex:1,display:'flex',flexDirection:'column',gap:18 }}>
+        <div className="export-modal-body">
 
           {/* Date range */}
           <div>
-            <div style={{ fontSize:10,letterSpacing:2,color:'var(--text-muted)',textTransform:'uppercase',marginBottom:8,fontWeight:600 }}>Date Range (Applied)</div>
+            <div className="export-section-label">Date Range (Applied)</div>
             <DateRangePicker dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} />
           </div>
 
           {/* Export type */}
           <div>
-            <div style={{ fontSize:10,letterSpacing:2,color:'var(--text-muted)',textTransform:'uppercase',marginBottom:8,fontWeight:600 }}>Export Type</div>
+            <div className="export-section-label">Export Type</div>
             <div style={{ display:'flex',gap:8 }}>
               {[[false,'Applications only'],[true,'Full export (includes timeline & rounds)']].map(([val,lbl])=>(
                 <button key={String(val)} onClick={()=>setFullExport(val)}
@@ -888,12 +883,10 @@ function ExportModal({ onClose }) {
           {/* Fields */}
           <div>
             <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8 }}>
-              <div style={{ fontSize:10,letterSpacing:2,color:'var(--text-muted)',textTransform:'uppercase',fontWeight:600 }}>Fields</div>
+              <div className="export-section-label" style={{ marginBottom:0 }}>Fields</div>
               <div style={{ display:'flex',gap:8 }}>
-                <button onClick={()=>setFields(Object.fromEntries(EXPORT_FIELDS.map(f=>[f.key,true])))}
-                  style={{ background:'none',border:'none',color:'var(--text-muted)',fontSize:10,cursor:'pointer',letterSpacing:1,padding:'2px 4px' }}>ALL</button>
-                <button onClick={()=>setFields(Object.fromEntries(EXPORT_FIELDS.map(f=>[f.key,false])))}
-                  style={{ background:'none',border:'none',color:'var(--text-muted)',fontSize:10,cursor:'pointer',letterSpacing:1,padding:'2px 4px' }}>NONE</button>
+                <button className="btn-text" onClick={()=>setFields(Object.fromEntries(EXPORT_FIELDS.map(f=>[f.key,true])))}>ALL</button>
+                <button className="btn-text" onClick={()=>setFields(Object.fromEntries(EXPORT_FIELDS.map(f=>[f.key,false])))}>NONE</button>
               </div>
             </div>
             {/* Mandatory — always on */}
@@ -924,11 +917,105 @@ function ExportModal({ onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding:'14px 24px',borderTop:'1px solid var(--border)',display:'flex',gap:10,flexShrink:0 }}>
-          <button className="btn-primary" style={{ flex:1,padding:'10px 0',fontSize:13 }} onClick={doExport} disabled={busy}>
+        <div className="export-modal-footer">
+          <button className="btn-primary" onClick={doExport} disabled={busy}>
             {busy?'Exporting…':'Export CSV'}
           </button>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── ShareModal ────────────────────────────────────────────────────────────────
+function ShareModal({ onClose, initialToken, onTokenChange }) {
+  const [token, setToken]   = useState(initialToken || null);
+  const updateToken = (t) => { setToken(t); if (onTokenChange) onTokenChange(t); };
+  const [busy,  setBusy]    = useState(false);
+  const [copied, setCopied] = useState(false);
+  const inputRef            = useRef(null);
+
+  useEffect(()=>{
+    const h=e=>{if(e.key==="Escape")onClose();};
+    window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
+  },[]);
+
+  const shareUrl = token
+    ? window.location.origin + window.location.pathname + '?share=' + token
+    : null;
+
+  const generate = async () => {
+    setBusy(true);
+    try {
+      const d = await api("generate_share_token","POST");
+      updateToken(d.token);
+    } catch { alert("Failed to generate share link."); }
+    setBusy(false);
+  };
+
+  const revoke = async () => {
+    if (!confirm("Revoke this share link? Anyone with the current link will lose access.")) return;
+    setBusy(true);
+    try {
+      await api("revoke_share_token","POST");
+      updateToken(null);
+    } catch { alert("Failed to revoke share link."); }
+    setBusy(false);
+  };
+
+  const copy = () => {
+    if (!shareUrl) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false), 2000); });
+    } else {
+      inputRef.current.select();
+      document.execCommand('copy');
+      setCopied(true);
+      setTimeout(()=>setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <>
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="modal-sm">
+        <div className="modal-sm-header">
+          <h2 className="modal-sm-title">Share Pipeline</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-sm-body">
+          {!token ? (
+            <>
+              <p className="modal-desc">
+                Generate a read-only link that lets anyone view your pipeline — no login required.
+              </p>
+              <button className="btn-primary" onClick={generate} disabled={busy}>
+                {busy ? "Generating…" : "Generate share link"}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="modal-desc">
+                Anyone with this link can view your pipeline in read-only mode.
+              </p>
+              <div className="share-url-row">
+                <input
+                  ref={inputRef}
+                  className="share-url-input"
+                  readOnly
+                  value={shareUrl}
+                  onClick={e=>e.target.select()}
+                />
+                <button className="btn-secondary" onClick={copy}>
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              <button className="btn-danger" onClick={revoke} disabled={busy}>
+                {busy ? "Revoking…" : "Revoke link"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </>
@@ -984,13 +1071,13 @@ function TimelineModal({ entryId, isNew, onClose, onSaved, onDeleted }) {
 
   return (
     <>
-      <div className="modal-backdrop" onClick={onClose} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:500 }} />
+      <div className="modal-backdrop" onClick={onClose} />
       <div className="app-modal">
         <div className="modal-header" style={{ flexShrink:0 }}>
-          <h2 style={{ fontSize:16,fontWeight:700,color:"var(--text-primary)" }}>{isNew?"Add Timeline Entry":"Edit Timeline Entry"}</h2>
+          <h2 className="modal-sm-title">{isNew?"Add Timeline Entry":"Edit Timeline Entry"}</h2>
           <div style={{ display:"flex",gap:8 }}>
             {!isNew && <button className="btn-danger" style={{ fontSize:11,padding:"5px 10px",letterSpacing:0.5 }} onClick={()=>setDelConf(true)}>Delete</button>}
-            <button onClick={onClose} style={{ background:"none",border:"none",color:"var(--text-muted)",fontSize:20,cursor:"pointer",lineHeight:1,padding:"0 4px" }}>✕</button>
+            <button className="modal-close" onClick={onClose}>✕</button>
           </div>
         </div>
         <div className="modal-body">
@@ -1029,7 +1116,7 @@ function TimelineModal({ entryId, isNew, onClose, onSaved, onDeleted }) {
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn-primary" style={{ flex:1,padding:"10px 0",fontSize:13 }} onClick={save} disabled={saving}>{saving?"Saving…":(isNew?"Add Entry":"Save Changes")}</button>
+          <button className="btn-primary" onClick={save} disabled={saving}>{saving?"Saving…":(isNew?"Add Entry":"Save Changes")}</button>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
         </div>
       </div>

@@ -9,7 +9,7 @@
 - `date_rejected` renamed to `date_closed` on `timeline_entries`; NULL only for Ghosted
 - Cover letter checkbox added to application fields
 - Outreach notes field added to application fields
-- `share_token` column added to `users` table (reserved for v3 read-only share — no UI)
+- `share_token` column added to `users` table to support read-only sharing capability
 
 ## v1.0.0 — 2026-05-20
 - Initial release

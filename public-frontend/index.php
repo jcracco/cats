@@ -51,7 +51,7 @@ $IS_DEMO = (
 
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // ── Icon primitives ───────────────────────────────────────────────────────────
 function LucideIcon({ size = 24, children }) {
@@ -70,6 +70,8 @@ const Sun      = ({ size = 24 }) => <LucideIcon size={size}><circle cx="12" cy="
 const Moon     = ({ size = 24 }) => <LucideIcon size={size}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></LucideIcon>;
 const FileText = ({ size = 24 }) => <LucideIcon size={size}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 20 8 14 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></LucideIcon>;
 const Download  = ({ size = 24 }) => <LucideIcon size={size}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></LucideIcon>;
+const Share2    = ({ size = 24 }) => <LucideIcon size={size}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></LucideIcon>;
+const UsersIcon = ({ size = 24 }) => <LucideIcon size={size}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></LucideIcon>;
 
 // ── ThemeToggle (fixed bottom-right) ──────────────────────────────────────────
 function ThemeToggle({ theme, onToggle }) {
@@ -90,23 +92,55 @@ function ThemeToggle({ theme, onToggle }) {
 <?php include PRIVATE_PATH . 'pipeline-modal.php'; ?>
 
 function App() {
+  const urlShareParam = new URLSearchParams(window.location.search).get('share');
+
   // ── Auth ──────────────────────────────────────────────────────────────────
-  const [isAuth, setIsAuth]       = useState(false);
-  const [authChecked, setChecked] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
+  const [isAuth, setIsAuth]             = useState(false);
+  const [authChecked, setChecked]       = useState(false);
+  const [showLogin, setShowLogin]       = useState(false);
+  const [myShareToken, setMyShareToken] = useState(null);
+  const [username, setUsername]         = useState(null);
+  const [isAdmin, setIsAdmin]           = useState(false);
+  const [shareApps, setShareApps]       = useState(null); // null=loading, false=error, array=ok
+  const [shareTab, setShareTab]         = useState('applications');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef(null);
+
+  const applySession = (d) => {
+    setIsAuth(!!d.auth);
+    setMyShareToken(d.share_token || null);
+    setUsername(d.username || null);
+    setIsAdmin(!!d.is_admin);
+  };
 
   useEffect(()=>{
+    if (urlShareParam) {
+      api("share","GET",null,{token:urlShareParam,slim:1})
+        .then(apps=>{ setShareApps(apps); setChecked(true); })
+        .catch(()=>{ setShareApps(false); setChecked(true); });
+      return;
+    }
     if (window.IS_DEMO) {
-      // Demo mode: auto-login as demo user on page load
       api("login","POST",{username:"demo",password:"demo"})
         .then(()=>{ setIsAuth(true); setChecked(true); })
         .catch(()=>{ setIsAuth(true); setChecked(true); });
     } else {
-      api("session").then(d=>{ setIsAuth(!!d.auth); setChecked(true); }).catch(()=>setChecked(true));
+      api("session").then(d=>{ applySession(d); setChecked(true); }).catch(()=>setChecked(true));
     }
   },[]);
 
-  const handleLogin = () => { setIsAuth(true); setShowLogin(false); refresh(); };
+  // Close user menu on outside click
+  useEffect(()=>{
+    if (!showUserMenu) return;
+    const handler = (e) => { if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setShowUserMenu(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showUserMenu]);
+
+  const handleLogin = () => {
+    setIsAuth(true); setShowLogin(false); refresh();
+    api("session").then(d => applySession(d)).catch(()=>{});
+  };
   const demoHint = window.IS_DEMO ? (
     <div style={{ background:"rgba(251,191,36,0.1)", border:"1px solid rgba(251,191,36,0.3)",
       borderRadius:8, padding:"8px 12px", marginBottom:16, fontSize:11, color:"#fbbf24", textAlign:"center" }}>
@@ -114,7 +148,7 @@ function App() {
     </div>
   ) : null;
   const handleLogout = () => {
-    api("logout","POST").then(()=>{ setIsAuth(false); refresh(); });
+    api("logout","POST").then(()=>{ setIsAuth(false); setMyShareToken(null); setUsername(null); setIsAdmin(false); setShowUserMenu(false); refresh(); });
   };
 
   // ── Theme ─────────────────────────────────────────────────────────────────
@@ -142,6 +176,7 @@ function App() {
   const [refreshKey, setRefresh]  = useState(0);
   const refresh = () => setRefresh(k=>k+1);
   const [showExport, setShowExport] = useState(false);
+  const [showShare,  setShowShare]  = useState(false);
 
   const openApp  = (a) => setAppModal({id: a?.id ?? null});
   const openTl   = (e) => {
@@ -161,6 +196,38 @@ function App() {
   if (!authChecked) return (
     <div className="centered muted">LOADING…</div>
   );
+
+  // ── Shared view (public read-only, no login required) ─────────────────────
+  if (urlShareParam) {
+    if (shareApps === false) return (
+      <div className="centered muted">Invalid or expired share link.</div>
+    );
+    return (
+      <div className="page">
+        <div className="top-bar">
+          <div className="top-bar-left">
+            <div className="eyebrow">Candidate Application Tracking System</div>
+            <h1>CATS</h1>
+          </div>
+          <div className="top-bar-right">
+            <span style={{ fontSize:11, color:"var(--text-muted)", letterSpacing:1 }}>SHARED VIEW</span>
+            <button title={theme==="dark"?"Switch to light mode":"Switch to dark mode"} onClick={toggleTheme}
+              style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", padding:"5px 6px", display:"flex", alignItems:"center", borderRadius:6, transition:"color 0.12s" }}
+              onMouseEnter={e=>e.currentTarget.style.color="var(--text-secondary)"}
+              onMouseLeave={e=>e.currentTarget.style.color="var(--text-muted)"}>
+              {theme==="dark" ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+          </div>
+        </div>
+        <div className="tabs">
+          <button className={`tab-btn${shareTab==="applications"?" active":""}`} onClick={()=>setShareTab("applications")}>Applications</button>
+          <button className={`tab-btn${shareTab==="timeline"?" active":""}`} onClick={()=>setShareTab("timeline")}>Timeline</button>
+        </div>
+        {shareTab==="applications" && <SharedAppsView allApps={shareApps} />}
+        {shareTab==="timeline"     && <SharedTimelineView allApps={shareApps} />}
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -188,31 +255,44 @@ function App() {
               + Add
             </button>
           )}
-          {isAuth && (
-            <button title="Export to CSV" onClick={()=>setShowExport(true)}
-              style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", padding:"5px 6px", display:"flex", alignItems:"center", borderRadius:6, transition:"color 0.12s" }}
-              onMouseEnter={e=>e.currentTarget.style.color="var(--text-secondary)"}
-              onMouseLeave={e=>e.currentTarget.style.color="var(--text-muted)"}>
-              <Download size={15} />
+          {isAuth && !window.IS_DEMO ? (
+            <div className="user-menu-wrap" ref={userMenuRef}>
+              <button className={`user-chip${showUserMenu?" open":""}`} onClick={()=>setShowUserMenu(v=>!v)}>
+                {username || "me"}
+              </button>
+              {showUserMenu && (
+                <div className="user-menu">
+                  {isAdmin && (
+                    <a className="user-menu-item" href="admin.php">
+                      <UsersIcon size={14} /> User Management
+                    </a>
+                  )}
+                  <button className="user-menu-item" onClick={()=>{ setShowExport(true); setShowUserMenu(false); }}>
+                    <Download size={14} /> Export CSV
+                  </button>
+                  <button className="user-menu-item" onClick={()=>{ setShowShare(true); setShowUserMenu(false); }}>
+                    <Share2 size={14} /> Share Pipeline
+                  </button>
+                  <div className="user-menu-divider" />
+                  <button className="user-menu-item" onClick={()=>{ toggleTheme(); setShowUserMenu(false); }}>
+                    {theme==="dark" ? <Sun size={14} /> : <Moon size={14} />}
+                    {theme==="dark" ? "Light Mode" : "Dark Mode"}
+                  </button>
+                  <div className="user-menu-divider" />
+                  <button className="user-menu-item danger" onClick={handleLogout}>
+                    <LogOut size={14} /> Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : window.IS_DEMO ? (<>
+            <button title="Export to CSV" className="icon-btn" onClick={()=>setShowExport(true)}><Download size={15} /></button>
+            <button title={theme==="dark"?"Light mode":"Dark mode"} className="icon-btn" onClick={toggleTheme}>
+              {theme==="dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-          )}
-          <button title={theme==="dark"?"Switch to light mode":"Switch to dark mode"} onClick={toggleTheme}
-            style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", padding:"5px 6px", display:"flex", alignItems:"center", borderRadius:6, transition:"color 0.12s" }}
-            onMouseEnter={e=>e.currentTarget.style.color="var(--text-secondary)"}
-            onMouseLeave={e=>e.currentTarget.style.color="var(--text-muted)"}>
-            {theme==="dark" ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
-          {isAuth
-            ? (!window.IS_DEMO && (
-                <button title="Sign out" onClick={handleLogout}
-                  style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", padding:"5px 6px", display:"flex", alignItems:"center", borderRadius:6, transition:"color 0.12s" }}
-                  onMouseEnter={e=>e.currentTarget.style.color="var(--text-secondary)"}
-                  onMouseLeave={e=>e.currentTarget.style.color="var(--text-muted)"}>
-                  <LogOut size={15} />
-                </button>
-              ))
-            : <button className="btn-link" onClick={()=>setShowLogin(true)}>Login</button>
-          }
+          </>) : !isAuth ? (
+            <button className="btn-link" onClick={()=>setShowLogin(true)}>Login</button>
+          ) : null}
         </div>
       </div>
 
@@ -255,6 +335,7 @@ function App() {
       {appModal    && <AppModal appId={appModal.id} isAuth={isAuth} onClose={()=>setAppModal(null)} onSaved={onAppSaved} onDeleted={onAppDeleted} defaultTab={appModal.defaultTab||"info"} />}
       {tlModal     && <TimelineModal entryId={tlModal.id} isNew={tlModal.isNew} onClose={()=>setTlModal(null)} onSaved={onTlSaved} onDeleted={onTlDeleted} />}
       {showExport  && <ExportModal onClose={()=>setShowExport(false)} />}
+      {showShare   && <ShareModal initialToken={myShareToken} onClose={()=>setShowShare(false)} onTokenChange={setMyShareToken} />}
     </div>
   );
 }

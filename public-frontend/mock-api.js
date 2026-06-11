@@ -1151,7 +1151,7 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
 
   // ── Auth ───────────────────────────────────────────────────────────────────
   if (action === "session") {
-    return { auth: s.auth };
+    return { auth: s.auth, share_token: null };
   }
   if (action === "login") {
     if (body?.username === "demo" && body?.password === "demo") {
@@ -1450,6 +1450,10 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
       };
     });
   }
+
+  // ── Share token (no-op in demo — share is disabled in demo mode) ─────────────
+  if (action === "generate_share_token") return { token: null };
+  if (action === "revoke_share_token")   return null;
 
   // ── Migration (no-op in demo) ──────────────────────────────────────────────
   if (action === "run_migration") return { workday_links_moved: 0, linkedin_consolidated: 0 };
