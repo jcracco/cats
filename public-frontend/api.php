@@ -248,6 +248,15 @@ if ($action === 'applications') {
     $date_to   = trim($_GET['date_to']   ?? '');
     if ($date_from) { $where[] = "a.date_applied >= ?"; $params[] = $date_from; }
     if ($date_to)   { $where[] = "a.date_applied <= ?"; $params[] = $date_to; }
+    $cover_letter_filter = trim($_GET['cover_letter_filter'] ?? '');
+    if ($cover_letter_filter === 'yes') { $where[] = "a.cover_letter = 1"; }
+    elseif ($cover_letter_filter === 'no') { $where[] = "a.cover_letter = 0"; }
+    $outreach_filter = trim($_GET['outreach_filter'] ?? '');
+    if ($outreach_filter === 'yes') { $where[] = "a.has_outreach = 1"; }
+    elseif ($outreach_filter === 'no') { $where[] = "a.has_outreach = 0"; }
+    $location_filter = trim($_GET['location_filter'] ?? '');
+    if ($location_filter === 'Remote') { $where[] = "a.location_type = 'Remote'"; }
+    elseif ($location_filter === 'Hybrid') { $where[] = "a.location_type = 'Hybrid'"; }
     $resume = trim($_GET['resume'] ?? '');
     if ($resume !== '') {
         $versions = array_filter(array_map('trim', explode(',', $resume)));

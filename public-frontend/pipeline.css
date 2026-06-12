@@ -642,6 +642,7 @@ h1 {
   border-radius: 20px;
   color: var(--text-muted);
   font-size: 10px;
+  font-weight: 600;
   padding: 4px 10px;
   cursor: pointer;
   transition: all 0.12s;
@@ -653,8 +654,8 @@ h1 {
   background: var(--pill-active-bg);
   border-color: var(--pill-active-border);
   color: var(--tab-active-color);
-  font-weight: 600;
 }
+
 
 .sort-select {
   background: var(--input-bg);

@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.0 — 2026-06-10
+## v2.0.0 — 2026-06-12
 - Multi-user support with `users` table; all applications scoped to authenticated user (breaking schema change — run migrate_v1_to_v2.sql)
 - Admin page (`admin.php`) for user management via `ADMIN_TOKEN` URL parameter
 - CSV export modal with field toggles, date range filter, and optional full export including timeline and interview rounds
@@ -10,6 +10,7 @@
 - Cover letter checkbox added to application fields
 - Outreach notes field added to application fields
 - `share_token` column added to `users` table to support read-only sharing capability
+- Restructured filters and statistics UI
 
 ## v1.0.0 — 2026-06-10
 - Initial release

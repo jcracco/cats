@@ -1,6 +1,6 @@
 <?php /* _pipeline-core.php — included by index.php. Never open directly. */ ?>
 // ── Constants & helpers ──────────────────────────────────────────────────────
-const COLORS  = { applied:"#94a3b8", recruiter:"#fbbf24", screening:"#818cf8", round:"#3b82f6", rejected:"#f87171", ghosted:"#fb7185", offer:"#4ade80", accepted:"#22c55e", withdrawn:"#64748b" };
+const COLORS  = { applied:"#94a3b8", recruiter:"#fbbf24", screening:"#818cf8", round:"#3b82f6", finalRound:"#a855f7", rejected:"#f87171", ghosted:"#fb7185", offer:"#4ade80", accepted:"#22c55e", withdrawn:"#64748b" };
 const LABEL_W = 195;
 const TODAY   = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
 const API     = "api.php";
@@ -182,7 +182,7 @@ function buildStats(sorted) {
 function Legend({ showEditHint=false }) {
   return (
     <div style={{ display:"flex", gap:18, flexWrap:"wrap", padding:"9px 14px", background:"var(--stat-bg)", border:"1px solid var(--border)", borderRadius:8, width:"fit-content" }}>
-      {[["Applied",COLORS.applied],["Recruiter",COLORS.recruiter],["Screening",COLORS.screening],["Interview Round",COLORS.round],["Offer",COLORS.offer],["Rejected",COLORS.rejected],["Accepted",COLORS.accepted],["Withdrawn",COLORS.withdrawn],["Ghosted",COLORS.ghosted]].map(([l,c])=>(
+      {[["Applied",COLORS.applied],["Recruiter",COLORS.recruiter],["Screening",COLORS.screening],["Interview Round",COLORS.round],["Final Round",COLORS.finalRound],["Offer",COLORS.offer],["Rejected",COLORS.rejected],["Accepted",COLORS.accepted],["Withdrawn",COLORS.withdrawn],["Ghosted",COLORS.ghosted]].map(([l,c])=>(
         <div key={l} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11 }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:c, boxShadow:`0 0 5px ${c}80` }} />
           <span style={{ color:"var(--text-secondary)" }}>{l}</span>
@@ -212,7 +212,7 @@ function TimelineTooltip({ item, tipPos }) {
         {item.recruiter && <div style={{ color:COLORS.recruiter }}>● Recruiter: {item.recruiter} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(item.applied,item.recruiter)}d)</span></div>}
         {item.screening && !sameRS && <div style={{ color:COLORS.screening }}>● Screening: {item.screening} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(item.recruiter,item.screening)}d later)</span></div>}
         {item.screening && sameRS  && <div style={{ color:COLORS.screening }}>● Screening: {item.screening} <span style={{ color:"var(--text-dim)", fontSize:11 }}>(same day)</span></div>}
-        {rounds.map((r,ri)=>{ const prev=ri===0?item.screening:rounds[ri-1]; return <div key={ri} style={{ color:COLORS.round }}>● Round {ri+1}: {r} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(prev,r)}d later)</span></div>; })}
+        {rounds.map((r,ri)=>{ const prev=ri===0?item.screening:rounds[ri-1]; const isFinal=item.rounds_full&&item.rounds_full[ri]&&item.rounds_full[ri].is_final_round; return <div key={ri} style={{ color:isFinal?COLORS.finalRound:COLORS.round }}>● Round {ri+1}{isFinal?" (Final)":""}: {r} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(prev,r)}d later)</span></div>; })}
         {item.offer_date && <div style={{ color:COLORS.offer }}>● Offer: {item.offer_date}</div>}
         {item.rejected
           ? <div style={{ color:item.status==="Accepted"?COLORS.accepted:item.status==="Withdrawn"?COLORS.withdrawn:COLORS.rejected }}>● {item.status==="Accepted"?"Accepted":item.status==="Withdrawn"?"Withdrawn":"Rejected"}: {item.rejected} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(rounds.length>0?rounds[rounds.length-1]:item.screening,item.rejected)}d later)</span></div>
@@ -291,7 +291,7 @@ function PipelineRow({ item, hovered, setHov, setTipPos, toX, onRowClick, onLink
         <Dot x={aX} color={COLORS.applied} glow={hov} size={9} />
         {!sameRS && item.recruiter && <Dot x={rX} color={COLORS.recruiter} glow={hov} size={8} border={true} />}
         {item.screening && <Dot x={sX} color={COLORS.screening} glow={hov} size={10} />}
-        {rounds.map((r,ri)=><Dot key={ri} x={toX(pd(r))} color={COLORS.round} glow={hov} size={10} border={true} />)}
+        {rounds.map((r,ri)=>{ const isFinal=item.rounds_full&&item.rounds_full[ri]&&item.rounds_full[ri].is_final_round; return <Dot key={ri} x={toX(pd(r))} color={isFinal?COLORS.finalRound:COLORS.round} glow={hov} size={10} border={true} />; })}
         {item.rejected && <Dot x={eX} color={closedColor} glow={hov} size={10} />}
         {gho && <Dot x={toX(gDate)} color={COLORS.ghosted} glow={hov} size={8} />}
         {item.offer_date && <Dot x={toX(pd(item.offer_date))} color={COLORS.offer} glow={hov} size={10} border={true} />}
@@ -333,27 +333,39 @@ function PipelineGrid({ sorted, hovered, setHov, tipPos, setTipPos, zones, toX, 
 function TimelineStatsRow({ sorted, zones, totalApps }) {
   const { withI, ghost, r2nd, totalIntvw, avgR, avgS, maxR, maxRC, shortest, longest, reachedFinal } = buildStats(sorted);
   const screenings = sorted.length;
+  const [showMore, setShowMore] = useState(false);
   return (
-    <div className="stats-bar">
-      <StatGroup label="Pipeline Funnel">
-        <StatBox label="Total Applications"    value={totalApps ?? "…"} />
-        <StatBox label="Screenings"            value={screenings} pct={totalApps?((screenings/totalApps)*100).toFixed(1):null} pctLabel="of applications" />
-        <StatBox label="Reached Hiring Manager" value={withI}    pct={screenings?((withI/screenings)*100).toFixed(0):null}    pctLabel="of screenings" />
-        <StatBox label="Passed 1st Round"      value={r2nd}      pct={withI?((r2nd/withI)*100).toFixed(0):null}              pctLabel="of HM interviews" />
-        <StatBox label="Reached Final Round"   value={reachedFinal} pct={withI?((reachedFinal/withI)*100).toFixed(0):null}   pctLabel="of HM interviews" />
-      </StatGroup>
-      <StatGroup label="Process Time">
-        <StatBox label="Avg → Recruiter"  value={`${avgR}d`} />
-        <StatBox label="Avg → Screening"  value={`${avgS}d`} />
-        {longest  && <StatBox label="Longest Process"  value={`${longest.days}d`} pctLabel={longest.company} />}
-        {shortest && <StatBox label="Shortest Process" value={`${shortest.days}d`} pctLabel={shortest.company} />}
-      </StatGroup>
-      <StatGroup label="Interview Activity">
-        <StatBox label="Total Interviews" value={totalIntvw} />
-        <StatBox label="Pipeline Gaps"    value={zones.length} />
-        <StatBox label="Ghosted"          value={ghost} />
-        <StatBox label="Most Rounds"      value={`${maxRC} ×${maxR}`} />
-      </StatGroup>
+    <div style={{ marginBottom:16 }}>
+      <div className="stats-bar" style={{ marginBottom:0 }}>
+        <StatGroup label="Pipeline Funnel">
+          <StatBox label="Total Applications"     value={totalApps ?? "…"} />
+          <StatBox label="Screenings"             value={screenings} pct={totalApps?((screenings/totalApps)*100).toFixed(1):null} pctLabel="of applications" />
+          <StatBox label="Reached Hiring Manager" value={withI}      pct={screenings?((withI/screenings)*100).toFixed(0):null}    pctLabel="of screenings" />
+          <StatBox label="Passed 1st Round"       value={r2nd}       pct={withI?((r2nd/withI)*100).toFixed(0):null}              pctLabel="of HM interviews" />
+          <StatBox label="Reached Final Round"    value={reachedFinal} pct={withI?((reachedFinal/withI)*100).toFixed(0):null}    pctLabel="of HM interviews" />
+        </StatGroup>
+        <StatGroup label="‎">
+          <StatBox label="Total Interviews" value={totalIntvw} />
+        </StatGroup>
+        <button onClick={()=>setShowMore(m=>!m)} style={{ alignSelf:"flex-end", background:"none", border:"none", color:"var(--text-dim)", fontSize:10, cursor:"pointer", letterSpacing:0.5, padding:"6px 4px", whiteSpace:"nowrap" }}>
+          {showMore ? "Less ▲" : "More ▼"}
+        </button>
+      </div>
+      {showMore && (
+        <div className="stats-bar" style={{ marginTop:6, marginBottom:0, animation:"dropdownIn 0.14s ease" }}>
+          <StatGroup label="Process Time">
+            <StatBox label="Avg → Recruiter"  value={`${avgR}d`} />
+            <StatBox label="Avg → Screening"  value={`${avgS}d`} />
+            {longest  && <StatBox label="Longest Process"  value={`${longest.days}d`} pctLabel={longest.company} />}
+            {shortest && <StatBox label="Shortest Process" value={`${shortest.days}d`} pctLabel={shortest.company} />}
+          </StatGroup>
+          <StatGroup label="Interview Activity">
+            <StatBox label="Pipeline Gaps" value={zones.length} />
+            <StatBox label="Ghosted"       value={ghost} />
+            <StatBox label="Most Rounds"   value={`${maxRC} ×${maxR}`} />
+          </StatGroup>
+        </div>
+      )}
     </div>
   );
 }
@@ -371,25 +383,39 @@ function StatGroup({ children, label }) {
 function AppStatsBar({ stats }) {
   if (!stats) return <div className="stats-bar"><div className="stat-card"><div className="stat-card-value">…</div></div></div>;
   const t = stats.total || 1;
+  const [showMore, setShowMore] = useState(false);
   return (
-    <div className="stats-bar">
-      <StatGroup label="‎">
-        <StatBox label="Total Applications" value={stats.total} />
-      </StatGroup>
-      <StatGroup label="Pipeline">
-        <StatBox label="Active"            value={stats.active}            pct={((stats.active/t)*100).toFixed(1)}            pctLabel="of total" />
-                <StatBox label="Reached Recruiter"    value={stats.reached_recruiter} pct={stats.reached_recruiter!=null?((stats.reached_recruiter/t)*100).toFixed(1):null} pctLabel="of total" />
-        <StatBox label="Did Not Progress"  value={stats.closed_no_prog}    pct={((stats.closed_no_prog/t)*100).toFixed(1)}    pctLabel="of total" />
-      </StatGroup>
-      <StatGroup label="Activity">
-        <StatBox label="This Week"   value={stats.this_week} />
-        <StatBox label="This Month"  value={stats.this_month} />
-        <StatBox label="Avg / Week"  value={stats.avg_week ?? "—"} />
-        <StatBox label="Avg / Month" value={stats.avg_month ?? "—"} />
-      </StatGroup>
-      <StatGroup label="Quality">
-        <StatBox label="Avg Rating"  value={stats.avg_rating ?? "—"} />
-      </StatGroup>
+    <div style={{ marginBottom:16 }}>
+      <div className="stats-bar" style={{ marginBottom:0 }}>
+        <StatGroup label="‎">
+          <StatBox label="Total Applications" value={stats.total} />
+        </StatGroup>
+        <StatGroup label="Pipeline">
+          <StatBox label="Active"            value={stats.active}           pct={((stats.active/t)*100).toFixed(1)}                                                           pctLabel="of total" />
+          <StatBox label="Reached Recruiter" value={stats.reached_recruiter} pct={stats.reached_recruiter!=null?((stats.reached_recruiter/t)*100).toFixed(1):null}            pctLabel="of total" />
+        </StatGroup>
+        <StatGroup label="Activity">
+          <StatBox label="This Week" value={stats.this_week} />
+        </StatGroup>
+        <button onClick={()=>setShowMore(m=>!m)} style={{ alignSelf:"flex-end", background:"none", border:"none", color:"var(--text-dim)", fontSize:10, cursor:"pointer", letterSpacing:0.5, padding:"6px 4px", whiteSpace:"nowrap" }}>
+          {showMore ? "Less ▲" : "More ▼"}
+        </button>
+      </div>
+      {showMore && (
+        <div className="stats-bar" style={{ marginTop:6, marginBottom:0, animation:"dropdownIn 0.14s ease" }}>
+          <StatGroup label="Pipeline">
+            <StatBox label="Did Not Progress" value={stats.closed_no_prog} pct={((stats.closed_no_prog/t)*100).toFixed(1)} pctLabel="of total" />
+          </StatGroup>
+          <StatGroup label="Activity">
+            <StatBox label="This Month"  value={stats.this_month} />
+            <StatBox label="Avg / Week"  value={stats.avg_week ?? "—"} />
+            <StatBox label="Avg / Month" value={stats.avg_month ?? "—"} />
+          </StatGroup>
+          <StatGroup label="Quality">
+            <StatBox label="Avg Rating" value={stats.avg_rating ?? "—"} />
+          </StatGroup>
+        </div>
+      )}
     </div>
   );
 }
@@ -408,16 +434,16 @@ function MultiDropdown({ label, options, value, onChange }) {
   return (
     <div ref={ref} style={{ position:"relative" }}>
       <button onClick={()=>setOpen(o=>!o)} className={`pill ${active?"active":""}`} style={{ display:"flex", alignItems:"center", gap:5 }}>
-        {label}{active ? ` (${value.length})` : ""}
+        {label}
+        <span style={{ minWidth:26, textAlign:"center", fontSize:10 }}>{active?`(${value.length})`:""}</span>
         <span style={{ fontSize:9, opacity:0.7 }}>{open?"▲":"▼"}</span>
       </button>
       {open && (
         <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:210, maxHeight:300, overflowY:"auto", boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
-          {value.length > 0 && (
-            <button onClick={()=>onChange([])} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>
-              CLEAR ALL
-            </button>
-          )}
+          {value.length > 0
+            ? <button onClick={()=>onChange([])} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>CLEAR</button>
+            : <div style={{ borderBottom:"1px solid var(--border)", color:"var(--text-dim)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", letterSpacing:1 }}>SHOWING ALL</div>
+          }
           {options.map(o=>(
             <label key={o} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", fontSize:12, color:value.includes(o)?"var(--text-primary)":"var(--text-secondary)" }}
               onMouseEnter={e=>e.currentTarget.style.background="var(--table-row-hover)"}
@@ -446,14 +472,16 @@ function StatusDropdown({ value, onChange }) {
   return (
     <div ref={ref} style={{ position:"relative" }}>
       <button onClick={()=>setOpen(o=>!o)} className={`pill ${active?"active":""}`} style={{ display:"flex", alignItems:"center", gap:5 }}>
-        Status{active ? ` (${value.length})` : ""}
+        Status
+        <span style={{ minWidth:26, textAlign:"center", fontSize:10 }}>{active?`(${value.length})`:""}</span>
         <span style={{ fontSize:9, opacity:0.7 }}>{open?"▲":"▼"}</span>
       </button>
       {open && (
         <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:180, boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
-          {value.length > 0 && (
-            <button onClick={()=>onChange([])} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>CLEAR ALL</button>
-          )}
+          {value.length > 0
+            ? <button onClick={()=>onChange([])} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>CLEAR</button>
+            : <div style={{ borderBottom:"1px solid var(--border)", color:"var(--text-dim)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", letterSpacing:1 }}>SHOWING ALL</div>
+          }
           {options.map(o=>(
             <label key={o.value} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", fontSize:12, color:value.includes(o.value)?"var(--text-primary)":"var(--text-secondary)" }}
               onMouseEnter={e=>e.currentTarget.style.background="var(--table-row-hover)"}
@@ -481,7 +509,7 @@ function DateRangePicker({ dateFrom, setDateFrom, dateTo, setDateTo }) {
       <input type="date" value={dateTo||""} onChange={e=>setDateTo(e.target.value||null)}
         style={{ background:"var(--input-bg)", border:"1px solid var(--input-border)", borderRadius:6,
           color:"var(--text-primary)", fontFamily:"inherit", fontSize:11, padding:"5px 8px", outline:"none", cursor:"pointer" }} />
-      {active && <button onClick={()=>{ setDateFrom(null); setDateTo(null); }} style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:12, padding:0, lineHeight:1 }}>✕</button>}
+      <button onClick={()=>{ setDateFrom(null); setDateTo(null); }} style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:active?"pointer":"default", fontSize:12, padding:0, lineHeight:1, opacity:active?1:0, pointerEvents:active?"auto":"none" }}>✕</button>
     </div>
   );
 }
@@ -499,7 +527,7 @@ function SalarySlider({ salaryMin, setSalaryMin, salaryType, setSalaryType }) {
       <span style={{ fontSize:10, fontWeight:700, minWidth:28, color: salaryMin>0?"#60a5fa":"var(--text-muted)" }}>
         {label}
       </span>
-      {salaryMin > 0 && <button onClick={()=>setSalaryMin(0)} style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:12, padding:0, lineHeight:1 }}>✕</button>}
+      <button onClick={()=>setSalaryMin(0)} style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:salaryMin>0?"pointer":"default", fontSize:12, padding:0, lineHeight:1, opacity:salaryMin>0?1:0, pointerEvents:salaryMin>0?"auto":"none" }}>✕</button>
       <div style={{ display:"flex", gap:6 }}>
         {["Yearly","Hourly"].map(t=>(
           <label key={t} style={{ display:"flex", alignItems:"center", gap:3, fontSize:10, color:salaryType===t?"var(--text-primary)":"var(--text-muted)", cursor:"pointer" }}>
@@ -512,31 +540,108 @@ function SalarySlider({ salaryMin, setSalaryMin, salaryType, setSalaryType }) {
   );
 }
 
-function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFilter, setResumeFilter, appliedFilter, setAppliedFilter, sort, setSort, allAppliedThrough, ratingMin, setRatingMin, dateFrom, setDateFrom, dateTo, setDateTo, sourceFilter, setSourceFilter, allSources, salaryMin, setSalaryMin, salaryType, setSalaryType, grouped, setGrouped }) {
+function ExtrasDropdown({ value, onChange }) {
+  // value = { coverLetter:[], outreach:[], location:[] }
+  // A section is "active" when exactly 1 of its 2 options is selected
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(()=>{
+    const h = e => { if(ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h); return()=>document.removeEventListener("mousedown", h);
+  },[]);
+
+  const activeCount =
+    (value.coverLetter.length === 1 ? 1 : 0) +
+    (value.outreach.length    === 1 ? 1 : 0) +
+    (value.location.length    === 1 ? 1 : 0);
+  const hasAny = activeCount > 0;
+
+  const toggle = (key, v) => {
+    const cur  = value[key];
+    const next = cur.includes(v) ? cur.filter(x=>x!==v) : [...cur, v];
+    onChange({ ...value, [key]: next });
+  };
+  const clearAll = () => onChange({ coverLetter:[], outreach:[], location:[] });
+
+  const Section = ({ label, fkey, opts }) => (
+    <>
+      <div style={{ fontSize:10, color:"var(--text-muted)", letterSpacing:1.5, padding:"8px 12px 3px", fontWeight:600 }}>{label}</div>
+      {opts.map(o => (
+        <label key={o.v} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 12px", cursor:"pointer", fontSize:12, color:value[fkey].includes(o.v)?"var(--text-primary)":"var(--text-secondary)" }}
+          onMouseEnter={e=>e.currentTarget.style.background="var(--table-row-hover)"}
+          onMouseLeave={e=>e.currentTarget.style.background="none"}>
+          <input type="checkbox" checked={value[fkey].includes(o.v)} onChange={()=>toggle(fkey, o.v)} style={{ cursor:"pointer" }} />
+          {o.label}
+        </label>
+      ))}
+    </>
+  );
+
   return (
-    <div className="filters">
+    <div ref={ref} style={{ position:"relative" }}>
+      <button onClick={()=>setOpen(o=>!o)} className={`pill ${hasAny?"active":""}`} style={{ display:"flex", alignItems:"center", gap:5 }}>
+        Extras
+        <span style={{ minWidth:26, textAlign:"center", fontSize:10 }}>{hasAny?`(${activeCount})`:""}</span>
+        <span style={{ fontSize:9, opacity:0.7 }}>{open?"▲":"▼"}</span>
+      </button>
+      {open && (
+        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:170, boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
+          {hasAny
+            ? <button onClick={clearAll} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>CLEAR</button>
+            : <div style={{ borderBottom:"1px solid var(--border)", color:"var(--text-dim)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", letterSpacing:1 }}>SHOWING ALL</div>
+          }
+          <Section label="COVER LETTER" fkey="coverLetter" opts={[{v:"yes",label:"Yes"},{v:"no",label:"No"}]} />
+          <div style={{ height:1, background:"var(--border)", margin:"4px 0" }} />
+          <Section label="OUTREACH" fkey="outreach" opts={[{v:"yes",label:"Yes"},{v:"no",label:"No"}]} />
+          <div style={{ height:1, background:"var(--border)", margin:"4px 0" }} />
+          <Section label="LOCATION" fkey="location" opts={[{v:"Remote",label:"Remote"},{v:"Hybrid",label:"Hybrid"}]} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Filter bar (second row, shown when Filters is toggled) ────────────────────
+function FilterBar({ statusFilter, setStatusFilter, resumeFilter, setResumeFilter, sourceFilter, setSourceFilter, appliedFilter, setAppliedFilter, allSources, allAppliedThrough, ratingMin, setRatingMin, salaryMin, setSalaryMin, salaryType, setSalaryType, dateFrom, setDateFrom, dateTo, setDateTo, extrasFilter, setExtrasFilter, onResetAll }) {
+  return (
+    <div className="filters" style={{ marginTop:-8, marginBottom:16, animation:"dropdownIn 0.14s ease" }}>
+      <StatusDropdown value={statusFilter} onChange={setStatusFilter} />
+      <MultiDropdown label="Resume" options={RESUME_VERSIONS} value={resumeFilter} onChange={setResumeFilter} />
+      <MultiDropdown label="Source" options={allSources} value={sourceFilter} onChange={setSourceFilter} />
+      <MultiDropdown label="Applied Via" options={allAppliedThrough} value={appliedFilter} onChange={setAppliedFilter} />
+      <ExtrasDropdown value={extrasFilter} onChange={setExtrasFilter} />
+      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        <span style={{ fontSize:10, color:"var(--text-muted)", whiteSpace:"nowrap" }}>Rating ≥</span>
+        <input type="range" min={0} max={100} step={5} value={ratingMin} onChange={e=>setRatingMin(Number(e.target.value))} style={{ width:80, cursor:"pointer" }} />
+        <span style={{ fontSize:10, fontWeight:700, minWidth:22, textAlign:"center", color:ratingMin>=80?"#4ade80":ratingMin>=65?"#d97706":"var(--text-muted)" }}>
+          {ratingMin > 0 ? ratingMin : "All"}
+        </span>
+        <button onClick={()=>setRatingMin(0)} style={{ background:"none", border:"none", color:"var(--text-muted)", fontSize:12, padding:0, lineHeight:1, opacity:ratingMin>0?1:0, cursor:ratingMin>0?"pointer":"default", pointerEvents:ratingMin>0?"auto":"none" }}>✕</button>
+      </div>
+      <SalarySlider salaryMin={salaryMin} setSalaryMin={setSalaryMin} salaryType={salaryType} setSalaryType={setSalaryType} />
+      <DateRangePicker dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} />
+      <button onClick={onResetAll} className="pill" style={{ fontSize:10, color:"var(--text-muted)", letterSpacing:0.5 }}>Clear all</button>
+    </div>
+  );
+}
+
+// ── Slim toolbar (search + filters toggle + grouped + sort) ───────────────────
+function AppFilters({ search, setSearch, showFilters, setShowFilters, activeFilterCount, grouped, setGrouped, sort, setSort, resultCount, showCount }) {
+  return (
+    <div className="filters" style={{ flexWrap:"nowrap" }}>
       <div style={{ position:"relative", display:"inline-flex", alignItems:"center" }}>
         <input className="filter-search" placeholder="Search company or role…" value={search} onChange={e=>setSearch(e.target.value)} style={{ paddingRight: search ? 28 : 12 }} />
         {search && (
           <button onClick={()=>setSearch("")} style={{ position:"absolute", right:8, background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:14, lineHeight:1, padding:0 }}>✕</button>
         )}
       </div>
-      <StatusDropdown value={statusFilter} onChange={setStatusFilter} />
-      <MultiDropdown label="Resume" options={RESUME_VERSIONS} value={resumeFilter} onChange={setResumeFilter} />
-      <MultiDropdown label="Source" options={allSources} value={sourceFilter} onChange={setSourceFilter} />
-      <MultiDropdown label="Applied Via" options={allAppliedThrough} value={appliedFilter} onChange={setAppliedFilter} />
-      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-        <span style={{ fontSize:10, color:"var(--text-muted)", whiteSpace:"nowrap" }}>Rating ≥</span>
-        <input type="range" min={0} max={100} step={5} value={ratingMin} onChange={e=>setRatingMin(Number(e.target.value))} style={{ width:80, cursor:"pointer" }} />
-        <span style={{ fontSize:10, fontWeight:700, minWidth:22, textAlign:"center",
-          color: ratingMin>=80?"#4ade80":ratingMin>=65?"#d97706":"var(--text-muted)" }}>
-          {ratingMin > 0 ? ratingMin : "All"}
-        </span>
-        {ratingMin > 0 && <button onClick={()=>setRatingMin(0)} style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:12, padding:0, lineHeight:1 }}>✕</button>}
-      </div>
-      <SalarySlider salaryMin={salaryMin} setSalaryMin={setSalaryMin} salaryType={salaryType} setSalaryType={setSalaryType} />
-      <DateRangePicker dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} />
-      <button onClick={()=>setGrouped(g=>!g)} className={`pill ${grouped?"active":""}`} title={grouped?"Switch to flat list":"Switch to grouped view"}>
+      <button onClick={()=>setShowFilters(f=>!f)} className={`pill${activeFilterCount>0?" active":""}`} style={{ display:"flex", alignItems:"center", gap:6, minWidth:100 }}>
+        <SlidersHorizontal size={12} />
+        Filters
+        <span style={{ minWidth:22, textAlign:"center", fontSize:10 }}>{activeFilterCount>0?`(${activeFilterCount})`:""}</span>
+        <span style={{ fontSize:9, opacity:0.6 }}>{showFilters?"▲":"▼"}</span>
+      </button>
+      <button onClick={()=>setGrouped(g=>!g)} className={`pill${grouped?" active":""}`} style={{ minWidth:82 }}>
         {grouped ? "⊞ Grouped" : "≡ Flat"}
       </button>
       <select className="sort-select" value={sort} onChange={e=>setSort(e.target.value)}>
@@ -544,6 +649,9 @@ function AppFilters({ search, setSearch, statusFilter, setStatusFilter, resumeFi
         <option value="date_asc">Date ↑</option>
         <option value="rating_desc">Rating ↓</option>
       </select>
+      <span style={{ fontSize:11, color:"var(--text-muted)", opacity:showCount?1:0, pointerEvents:"none", whiteSpace:"nowrap", transition:"opacity 0.15s" }}>
+        Showing <strong style={{ color:"var(--text-primary)" }}>{resultCount ?? 0}</strong> result{resultCount!==1?"s":""}
+      </span>
     </div>
   );
 }
@@ -719,6 +827,26 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
   const [salaryMin, setSalaryMin]     = useState(0);
   const [salaryType, setSalaryType]   = useState('Yearly');
   const [allAppliedThrough, setAllAT] = useState([...APPLIED_THROUGH]);
+  const [extrasFilter, setExtrasF]    = useState({ coverLetter:[], outreach:[], location:[] });
+  const [showFilters, setShowFilters] = useState(false);
+
+  const activeFilterCount =
+    (statusFilter.length > 0 ? 1 : 0) +
+    (resumeFilter.length > 0 ? 1 : 0) +
+    (sourceFilter.length > 0 ? 1 : 0) +
+    (appliedFilter.length > 0 ? 1 : 0) +
+    (ratingMin > 0 ? 1 : 0) +
+    (salaryMin > 0 ? 1 : 0) +
+    ((dateFrom || dateTo) ? 1 : 0) +
+    (extrasFilter.coverLetter.length === 1 ? 1 : 0) +
+    (extrasFilter.outreach.length    === 1 ? 1 : 0) +
+    (extrasFilter.location.length    === 1 ? 1 : 0);
+
+  const onResetAll = () => {
+    setStatusF([]); setResumeF([]); setSourceF([]); setAppliedF([]);
+    setRatingMin(0); setSalaryMin(0); setDateFrom(null); setDateTo(null);
+    setExtrasF({ coverLetter:[], outreach:[], location:[] });
+  };
 
   useEffect(() => {
     api("stats").then(setStats).catch(console.error);
@@ -752,34 +880,42 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
     if (dateTo)   params.date_to   = dateTo;
     if (sourceFilter.length) params.source_filter = sourceFilter.join(',');
     if (salaryMin > 0) { params.salary_min = salaryMin; params.salary_type_filter = salaryType; }
+    if (extrasFilter.coverLetter.length === 1) params.cover_letter_filter = extrasFilter.coverLetter[0];
+    if (extrasFilter.outreach.length    === 1) params.outreach_filter     = extrasFilter.outreach[0];
+    if (extrasFilter.location.length    === 1) params.location_filter     = extrasFilter.location[0];
     api("applications", "GET", null, params).then(setApps).catch(console.error);
-  }, [search, statusFilter, resumeFilter, appliedFilter, ratingMin, dateFrom, dateTo, sourceFilter, salaryMin, salaryType, sort, refreshKey]);
+  }, [search, statusFilter, resumeFilter, appliedFilter, ratingMin, dateFrom, dateTo, sourceFilter, salaryMin, salaryType, sort, extrasFilter, refreshKey]);
 
   return (
     <div>
       <AppStatsBar stats={stats} />
       <AppFilters
         search={search} setSearch={setSearch}
-        statusFilter={statusFilter} setStatusFilter={setStatusF}
-        resumeFilter={resumeFilter} setResumeFilter={setResumeF}
-        appliedFilter={appliedFilter} setAppliedFilter={setAppliedF}
-        allAppliedThrough={allAppliedThrough}
-        sort={sort} setSort={setSort}
-        ratingMin={ratingMin} setRatingMin={setRatingMin}
-        dateFrom={dateFrom} setDateFrom={setDateFrom}
-        dateTo={dateTo} setDateTo={setDateTo}
-        sourceFilter={sourceFilter} setSourceFilter={setSourceF} allSources={allSources}
-        salaryMin={salaryMin} setSalaryMin={setSalaryMin}
-        salaryType={salaryType} setSalaryType={setSalaryType}
+        showFilters={showFilters} setShowFilters={setShowFilters}
+        activeFilterCount={activeFilterCount}
         grouped={grouped} setGrouped={setGrouped}
+        sort={sort} setSort={setSort}
+        resultCount={apps !== null ? apps.length : null}
+        showCount={!!(apps !== null && (search || activeFilterCount > 0))}
       />
-      {apps !== null && (statusFilter.length||resumeFilter.length||appliedFilter.length||sourceFilter.length||search||ratingMin>0||dateFrom||dateTo||salaryMin>0) && (
-        <div style={{ fontSize:11,color:"var(--text-muted)",marginBottom:8,letterSpacing:1 }}>
-          Showing <strong style={{ color:"var(--text-primary)" }}>{apps.length}</strong> result{apps.length!==1?"s":""}
-        </div>
+      {showFilters && (
+        <FilterBar
+          statusFilter={statusFilter} setStatusFilter={setStatusF}
+          resumeFilter={resumeFilter} setResumeFilter={setResumeF}
+          sourceFilter={sourceFilter} setSourceFilter={setSourceF}
+          appliedFilter={appliedFilter} setAppliedFilter={setAppliedF}
+          allSources={allSources} allAppliedThrough={allAppliedThrough}
+          ratingMin={ratingMin} setRatingMin={setRatingMin}
+          salaryMin={salaryMin} setSalaryMin={setSalaryMin}
+          salaryType={salaryType} setSalaryType={setSalaryType}
+          dateFrom={dateFrom} setDateFrom={setDateFrom}
+          dateTo={dateTo} setDateTo={setDateTo}
+          extrasFilter={extrasFilter} setExtrasFilter={setExtrasF}
+          onResetAll={onResetAll}
+        />
       )}
       <AppTable apps={apps} onRowClick={onOpenApp} onStatusChange={isAuth ? onStatusChange : null} grouped={grouped} sort={sort}
-        hasFilters={!!(search || statusFilter.length || resumeFilter.length || appliedFilter.length || sourceFilter.length || ratingMin > 0 || dateFrom || dateTo || salaryMin > 0)} />
+        hasFilters={!!(search || activeFilterCount > 0)} />
     </div>
   );
 }
@@ -841,10 +977,11 @@ function SharedTimelineView({ allApps }) {
 
   const [hovered, setHov]   = useState(null);
   const [tipPos, setTipPos] = useState({x:0,y:0});
+  const [sortDir, setSortDir] = useState("desc");
 
   if (!entries.length) return <div className="empty-state">No timeline entries in shared data.</div>;
 
-  const sorted = [...entries].sort((a,b)=>pd(a.applied)-pd(b.applied));
+  const sorted = [...entries].sort((a,b)=> sortDir==="asc" ? pd(a.applied)-pd(b.applied) : pd(b.applied)-pd(a.applied));
   const { toX, monthLabels, zones } = buildTimelineData(sorted);
   const hoveredItem = sorted.find(i=>i.id===hovered)||null;
   const todayStr = TODAY.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
@@ -852,11 +989,17 @@ function SharedTimelineView({ allApps }) {
   return (
     <div>
       <TimelineStatsRow sorted={sorted} zones={zones} totalApps={allApps.length} />
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:6 }}>
+        <span style={{ fontSize:11, color:"var(--text-dim)" }}>{todayStr}</span>
+        <select className="sort-select" value={sortDir} onChange={e=>setSortDir(e.target.value)}>
+          <option value="desc">Newest first</option>
+          <option value="asc">Oldest first</option>
+        </select>
+      </div>
       <PipelineGrid sorted={sorted} hovered={hovered} setHov={setHov} tipPos={tipPos} setTipPos={setTipPos} zones={zones} toX={toX} monthLabels={monthLabels} onRowClick={null} onLinkClick={null} />
       {hoveredItem && <TimelineTooltip item={hoveredItem} tipPos={tipPos} />}
-      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, marginTop:20 }}>
+      <div style={{ marginTop:20 }}>
         <Legend showEditHint={false} />
-        <div style={{ fontSize:11, color:"var(--text-dim)", whiteSpace:"nowrap", paddingTop:10 }}>{todayStr}</div>
       </div>
     </div>
   );
@@ -869,6 +1012,7 @@ function TimelineTab({ isAuth, onRowClick, onLinkClick, refreshKey }) {
   const [hovered, setHov]       = useState(null);
   const [tipPos, setTipPos]     = useState({x:0,y:0});
   const [totalApps, setTotalApps] = useState(null);
+  const [sortDir, setSortDir]   = useState("desc");
 
   useEffect(() => {
     api("stats").then(s => setTotalApps(s?.total ?? null)).catch(()=>{});
@@ -901,7 +1045,7 @@ function TimelineTab({ isAuth, onRowClick, onLinkClick, refreshKey }) {
   if (loading) return <div className="empty-state">Loading timeline…</div>;
   if (!entries.length) return <div className="empty-state">No timeline entries yet.</div>;
 
-  const sorted = [...entries].sort((a,b)=>pd(a.applied)-pd(b.applied));
+  const sorted = [...entries].sort((a,b)=> sortDir==="asc" ? pd(a.applied)-pd(b.applied) : pd(b.applied)-pd(a.applied));
   const { toX, monthLabels, zones } = buildTimelineData(sorted);
   const hoveredItem = sorted.find(i=>i.id===hovered)||null;
   const todayStr = TODAY.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
@@ -909,11 +1053,17 @@ function TimelineTab({ isAuth, onRowClick, onLinkClick, refreshKey }) {
   return (
     <div>
       <TimelineStatsRow sorted={sorted} zones={zones} totalApps={totalApps} />
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:6 }}>
+        <span style={{ fontSize:11, color:"var(--text-dim)" }}>{todayStr}</span>
+        <select className="sort-select" value={sortDir} onChange={e=>setSortDir(e.target.value)}>
+          <option value="desc">Newest first</option>
+          <option value="asc">Oldest first</option>
+        </select>
+      </div>
       <PipelineGrid sorted={sorted} hovered={hovered} setHov={setHov} tipPos={tipPos} setTipPos={setTipPos} zones={zones} toX={toX} monthLabels={monthLabels} onRowClick={isAuth?onRowClick:null} onLinkClick={onLinkClick} />
       {hoveredItem && <TimelineTooltip item={hoveredItem} tipPos={tipPos} />}
-      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, marginTop:20 }}>
+      <div style={{ marginTop:20 }}>
         <Legend showEditHint={isAuth} />
-        <div style={{ fontSize:11, color:"var(--text-dim)", whiteSpace:"nowrap", paddingTop:10 }}>{todayStr}</div>
       </div>
     </div>
   );
