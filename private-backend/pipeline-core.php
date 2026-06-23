@@ -139,24 +139,30 @@ function FormField({ label, children }) {
 
 // ── Timeline: buildTimelineData ───────────────────────────────────────────────
 function buildTimelineData(sorted) {
+  // If any application was accepted the search is over — stop the axis at data end, not today
+  const searchClosed = sorted.some(i => i.status === "Accepted");
+
   const allDates = sorted.flatMap(i=>[i.applied,i.recruiter,i.screening,...(i.rounds||[]),i.rejected,i.offer_date]).filter(Boolean).map(d=>new Date(d));
   const earliest = new Date(Math.min(...allDates));
-  const START    = new Date(earliest.getFullYear(), earliest.getMonth(), 1); // first day of earliest month
-  const latest   = new Date(Math.max(...allDates, TODAY));
-  latest.setDate(latest.getDate()+20);
+  const START    = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+  const latestMs = searchClosed ? Math.max(...allDates) : Math.max(...allDates, TODAY);
+  const latest   = new Date(latestMs);
+  latest.setDate(latest.getDate() + (searchClosed ? 7 : 20));
   const END = new Date(latest.getFullYear(), latest.getMonth()+1, 1);
   const TMS = END - START;
   const toX = d => ((d-START)/TMS)*100;
   const monthLabels = [];
   let md = new Date(START);
   while(md<=END){ monthLabels.push({label:md.toLocaleString("default",{month:"short",year:"2-digit"}),x:toX(new Date(md))}); md=new Date(md.getFullYear(),md.getMonth()+1,1); }
-  const wins = sorted.map(i=>{ const lastAct = i.screening?pd(i.screening):i.recruiter?pd(i.recruiter):pd(i.applied); return { start:pd(i.recruiter)||pd(i.applied), end:i.rejected?pd(i.rejected):i.pending?TODAY:new Date(lastAct.getTime()+14*86400000) }; }).filter(w=>w.start).sort((a,b)=>a.start-b.start);
+  // When search is closed, treat pending apps as ghosted (don't extend their band to today)
+  const wins = sorted.map(i=>{ const lastAct = i.screening?pd(i.screening):i.recruiter?pd(i.recruiter):pd(i.applied); return { start:pd(i.recruiter)||pd(i.applied), end:i.rejected?pd(i.rejected):(i.pending&&!searchClosed)?TODAY:new Date(lastAct.getTime()+14*86400000) }; }).filter(w=>w.start).sort((a,b)=>a.start-b.start);
   const merged=[];
   for(const w of wins){ if(!merged.length||w.start>merged[merged.length-1].end) merged.push({...w}); else merged[merged.length-1].end=new Date(Math.max(merged[merged.length-1].end,w.end)); }
   const zones=[];
   for(let i=1;i<merged.length;i++){ const d=dBw(merged[i-1].end,merged[i].start); if(d>0) zones.push({start:merged[i-1].end,end:merged[i].start,days:d}); }
+  // Only show the trailing "current gap" when the search is still active
   const last=merged[merged.length-1];
-  if(last&&last.end<TODAY) zones.push({start:last.end,end:TODAY,days:dBw(last.end,TODAY),current:true});
+  if(!searchClosed&&last&&last.end<TODAY) zones.push({start:last.end,end:TODAY,days:dBw(last.end,TODAY),current:true});
   return { toX, monthLabels, zones };
 }
 
