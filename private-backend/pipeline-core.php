@@ -219,9 +219,9 @@ function TimelineTooltip({ item, tipPos }) {
         {item.screening && !sameRS && <div style={{ color:COLORS.screening }}>● Screening: {item.screening} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(item.recruiter,item.screening)}d later)</span></div>}
         {item.screening && sameRS  && <div style={{ color:COLORS.screening }}>● Screening: {item.screening} <span style={{ color:"var(--text-dim)", fontSize:11 }}>(same day)</span></div>}
         {rounds.map((r,ri)=>{ const prev=ri===0?item.screening:rounds[ri-1]; const isFinal=item.rounds_full&&item.rounds_full[ri]&&item.rounds_full[ri].is_final_round; return <div key={ri} style={{ color:isFinal?COLORS.finalRound:COLORS.round }}>● Round {ri+1}{isFinal?" (Final)":""}: {r} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(prev,r)}d later)</span></div>; })}
-        {item.offer_date && <div style={{ color:COLORS.offer }}>● Offer: {item.offer_date}</div>}
+        {item.offer_date && <div style={{ color:COLORS.offer }}>● Offer: {item.offer_date} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(rounds.length>0?rounds[rounds.length-1]:item.screening,item.offer_date)}d later)</span></div>}
         {item.rejected
-          ? <div style={{ color:item.status==="Accepted"?COLORS.accepted:item.status==="Withdrawn"?COLORS.withdrawn:COLORS.rejected }}>● {item.status==="Accepted"?"Accepted":item.status==="Withdrawn"?"Withdrawn":"Rejected"}: {item.rejected} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(rounds.length>0?rounds[rounds.length-1]:item.screening,item.rejected)}d later)</span></div>
+          ? <div style={{ color:item.status==="Accepted"?COLORS.accepted:item.status==="Withdrawn"?COLORS.withdrawn:COLORS.rejected }}>● {item.status==="Accepted"?"Accepted":item.status==="Withdrawn"?"Withdrawn":"Rejected"}: {item.rejected} <span style={{ color:"var(--text-dim)", fontSize:11 }}>({dBw(item.offer_date?item.offer_date:rounds.length>0?rounds[rounds.length-1]:item.screening,item.rejected)}d later)</span></div>
           : item.pending
             ? <div style={{ color:"#3b82f6" }}>● Active / Pending</div>
             : <div style={{ color:COLORS.ghosted }}>● Ghosted</div>
