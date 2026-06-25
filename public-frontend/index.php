@@ -298,7 +298,7 @@ function App() {
         </div>
         <div className="top-bar-right">
           {isAuth && (
-            <button className="btn-primary" onClick={()=>{ if(tab==="applications") openApp(null); else openTl(null); }}>
+            <button className="btn-primary" onClick={()=>openApp(null)}>
               + Add
             </button>
           )}

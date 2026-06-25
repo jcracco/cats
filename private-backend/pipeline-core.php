@@ -154,8 +154,37 @@ function buildTimelineData(sorted) {
   const monthLabels = [];
   let md = new Date(START);
   while(md<=END){ monthLabels.push({label:md.toLocaleString("default",{month:"short",year:"2-digit"}),x:toX(new Date(md))}); md=new Date(md.getFullYear(),md.getMonth()+1,1); }
+  // Earliest acceptance date — once any offer is accepted the search is over
+  const closeDate = searchClosed
+    ? (() => {
+        const ds = sorted.filter(i => i.status === "Accepted" && i.rejected).map(i => pd(i.rejected)).filter(Boolean);
+        return ds.length ? new Date(Math.min(...ds)) : null;
+      })()
+    : null;
+
   // When search is closed, treat pending apps as ghosted (don't extend their band to today)
-  const wins = sorted.map(i=>{ const lastAct = i.screening?pd(i.screening):i.recruiter?pd(i.recruiter):pd(i.applied); return { start:pd(i.recruiter)||pd(i.applied), end:i.rejected?pd(i.rejected):(i.pending&&!searchClosed)?TODAY:new Date(lastAct.getTime()+14*86400000) }; }).filter(w=>w.start).sort((a,b)=>a.start-b.start);
+  const wins = sorted.map(i => {
+    const rounds = i.rounds || [];
+    // Include rounds and offer_date so ghost/pending-closed ends are based on real last activity
+    const actDates = [i.applied, i.recruiter, i.screening, ...rounds, i.offer_date]
+      .filter(Boolean).map(d => pd(d));
+    const lastAct = actDates.length ? new Date(Math.max(...actDates)) : pd(i.applied);
+    const isAccepted = i.status === "Accepted";
+    const rawEnd = i.rejected
+      ? pd(i.rejected)                                    // date_closed (covers Accepted too)
+      : isAccepted
+        ? lastAct                                         // Accepted with no date_closed: use last activity
+        : (i.pending && !searchClosed)
+          ? TODAY
+          : new Date(lastAct.getTime() + 14*86400000);   // ghosted: last activity + 14d
+    // Clip end at closeDate — post-close activity on any row must not extend gap detection
+    const end = closeDate && rawEnd > closeDate ? closeDate : rawEnd;
+    const rawStart = pd(i.recruiter) || pd(i.applied);
+    const start = (isAccepted && rawStart > end) ? end : rawStart;
+    return { start, end };
+  }).filter(w => w.start && w.end && w.start < w.end)
+    .filter(w => !closeDate || w.start < closeDate)  // exclude wins starting at/after acceptance
+    .sort((a,b) => a.start - b.start);
   const merged=[];
   for(const w of wins){ if(!merged.length||w.start>merged[merged.length-1].end) merged.push({...w}); else merged[merged.length-1].end=new Date(Math.max(merged[merged.length-1].end,w.end)); }
   const zones=[];
@@ -195,7 +224,7 @@ function Legend({ showEditHint=false }) {
         </div>
       ))}
       <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11 }}>
-        <div style={{ width:18, height:2, background:"repeating-linear-gradient(90deg,rgba(239,68,68,0.5) 0,rgba(239,68,68,0.5) 4px,transparent 4px,transparent 8px)" }} />
+        <div style={{ width:18, height:2, background:"rgba(239,68,68,0.5)" }} />
         <span style={{ color:"var(--text-secondary)" }}>Gap</span>
         {showEditHint && <span style={{ color:"var(--text-dim)", fontSize:10, borderLeft:"1px solid var(--border)", paddingLeft:10, marginLeft:4 }}>click any row to edit</span>}
       </div>
@@ -319,7 +348,7 @@ function PipelineGrid({ sorted, hovered, setHov, tipPos, setTipPos, zones, toX, 
             {monthLabels.map(({label,x})=><div key={label} style={{ position:"absolute", left:`${x}%`, top:0, bottom:0, width:1, background:"var(--grid-line)" }} />)}
             {zones.map((z,zi)=>(
               <div key={zi}>
-                <div style={{ position:"absolute", left:`${toX(z.start)}%`, width:`${Math.max(toX(z.end)-toX(z.start),0)}%`, top:0, bottom:0, background:"repeating-linear-gradient(90deg,rgba(239,68,68,0.04) 0,rgba(239,68,68,0.04) 8px,transparent 8px,transparent 16px)", borderLeft:"1px dashed rgba(239,68,68,0.3)" }} />
+                <div style={{ position:"absolute", left:`${toX(z.start)}%`, width:`${Math.max(toX(z.end)-toX(z.start),0)}%`, top:0, bottom:0, background:"rgba(239,68,68,0.04)", borderLeft:"1px solid rgba(239,68,68,0.3)" }} />
                 <div style={{ position:"absolute", left:`calc(${toX(z.start)}% + 4px)`, top:6, fontSize:9, color:"rgba(239,68,68,0.55)", letterSpacing:2, textTransform:"uppercase", whiteSpace:"nowrap" }}>
                   {z.current?`empty · ${dBw(z.start,TODAY)}d and counting`:`${z.days}d gap`}
                 </div>
