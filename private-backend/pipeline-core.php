@@ -629,7 +629,7 @@ function ExtrasDropdown({ value, onChange }) {
           <div style={{ height:1, background:"var(--border)", margin:"4px 0" }} />
           <Section label="OUTREACH" fkey="outreach" opts={[{v:"yes",label:"Yes"},{v:"no",label:"No"}]} />
           <div style={{ height:1, background:"var(--border)", margin:"4px 0" }} />
-          <Section label="LOCATION" fkey="location" opts={[{v:"Remote",label:"Remote"},{v:"Hybrid",label:"Hybrid"}]} />
+          <Section label="LOCATION" fkey="location" opts={[{v:"Remote",label:"Remote"},{v:"Hybrid",label:"Hybrid"},{v:"Onsite",label:"Onsite"}]} />
         </div>
       )}
     </div>
@@ -757,7 +757,10 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
     if (a.salary_requested) parts.push(`Requested: ${a.salary_requested}${a.salary_type==="Hourly"?" /h":""}`);
     return parts.join(" · ");
   };
-  const displayLoc     = a => a.location_type === "Hybrid" ? `Hybrid${a.hybrid_location?` (${a.hybrid_location})`:""}` : "Remote";
+  const displayLoc     = a => {
+    if (!a.location_type || a.location_type === "Remote") return "Remote";
+    return `${a.location_type}${a.location_detail ? ` (${a.location_detail})` : ""}`;
+  };
 
   return (
     <>
@@ -797,8 +800,9 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
                 <td className="col-title"  title={a.job_title}>{a.job_title}</td>
                 <td><StatusBadge status={a.status} /></td>
                 <td>{a.source ? (() => {
-                  const sc = SOURCE_COLORS[a.source];
-                  return <span className="source-pill" style={sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}}>{a.source}</span>;
+                  const sc  = SOURCE_COLORS[a.source];
+                  const tip = a.source === "Referral" && a.referrer_name ? `Referred by: ${a.referrer_name}` : undefined;
+                  return <span className="source-pill" title={tip} style={{ ...(sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}), cursor:tip?"help":undefined }}>{a.source}</span>;
                 })() : "—"}</td>
                 <td>{a.applied_through || "—"}{displayOutreachDot(a)}</td>
                 <td>{a.resume_version || "—"}{a.cover_letter ? <span title="Cover letter added" style={{marginLeft:4,color:"var(--text-muted)",cursor:"help"}}><FileText size={13} /></span> : null}</td>

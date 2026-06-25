@@ -1,5 +1,5 @@
 -- ============================================================
--- CATS — Database Setup Script v2.0
+-- CATS — Database Setup Script v3.0.0
 -- Run once on a fresh install as MySQL root / admin user
 -- ============================================================
 
@@ -23,14 +23,103 @@ CREATE TABLE IF NOT EXISTS users (
     username            VARCHAR(100)                NOT NULL,
     password_hash       VARCHAR(255)                NOT NULL,
     is_admin            TINYINT                     NOT NULL DEFAULT 0,
-    share_token         VARCHAR(64)                 DEFAULT NULL,  -- reserved for v3 read-only share
+    share_token         VARCHAR(64)                 DEFAULT NULL,
     created_at          TIMESTAMP                   NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     UNIQUE KEY uq_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- 3. applications
+-- 3. resume_versions (v3) — per-user only, no global defaults
+-- ============================================================
+CREATE TABLE IF NOT EXISTS resume_versions (
+    id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id             INT UNSIGNED                NOT NULL,
+    name                VARCHAR(50)                 NOT NULL,
+    created_at          TIMESTAMP                   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_user_name (user_id, name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- 4. sources (v3) — global defaults (user_id NULL) + per-user additions
+-- ============================================================
+CREATE TABLE IF NOT EXISTS sources (
+    id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id             INT UNSIGNED                DEFAULT NULL,
+    name                VARCHAR(100)                NOT NULL,
+    created_at          TIMESTAMP                   NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO sources (user_id, name) VALUES
+    (NULL, 'Company website'),
+    (NULL, 'LinkedIn'),
+    (NULL, 'Recruiter Outreach'),
+    (NULL, 'Referral'),
+    (NULL, 'Dice'),
+    (NULL, 'Recruiting Agency'),
+    (NULL, 'Indeed'),
+    (NULL, 'Cybercoders'),
+    (NULL, 'Jobgether'),
+    (NULL, 'BuiltIn'),
+    (NULL, 'Hiring Café'),
+    (NULL, 'Other');
+
+
+-- 5. applied_through_options (v3) — global defaults (user_id NULL) + per-user additions
+-- ============================================================
+CREATE TABLE IF NOT EXISTS applied_through_options (
+    id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id             INT UNSIGNED                DEFAULT NULL,
+    name                VARCHAR(100)                NOT NULL,
+    created_at          TIMESTAMP                   NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO applied_through_options (user_id, name) VALUES
+    (NULL, 'LinkedIn Easy Apply'),
+    (NULL, 'Indeed'),
+    (NULL, 'Dice'),
+    (NULL, 'Cybercoders'),
+    (NULL, 'Email'),
+    (NULL, 'Recruiting Firm Portal'),
+    (NULL, 'Workday'),
+    (NULL, 'SmartRecruiters'),
+    (NULL, 'ADP'),
+    (NULL, 'Greenhouse'),
+    (NULL, 'iCIMS'),
+    (NULL, 'Rippling'),
+    (NULL, 'Oracle'),
+    (NULL, 'Taleo'),
+    (NULL, 'Bamboo'),
+    (NULL, 'Lever'),
+    (NULL, 'Oracle Cloud'),
+    (NULL, 'Dayforce'),
+    (NULL, 'SAP SuccessFactors'),
+    (NULL, 'Ashby'),
+    (NULL, 'Kronos'),
+    (NULL, 'Pinpoint'),
+    (NULL, 'Humi'),
+    (NULL, 'Paylocity'),
+    (NULL, 'Hirebridge'),
+    (NULL, 'Kula'),
+    (NULL, 'Paycor'),
+    (NULL, 'UltiPro'),
+    (NULL, 'Jobvite'),
+    (NULL, 'JazzHR'),
+    (NULL, 'Eightfold'),
+    (NULL, 'Workable'),
+    (NULL, 'Gem'),
+    (NULL, 'Trakstar'),
+    (NULL, 'Paycom'),
+    (NULL, 'Dover'),
+    (NULL, 'ApplyToJob'),
+    (NULL, 'Avature'),
+    (NULL, 'Teamtailor'),
+    (NULL, 'Breezy'),
+    (NULL, 'Other/Unknown');
+
+
+-- 6. applications
 -- ============================================================
 CREATE TABLE IF NOT EXISTS applications (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -48,17 +137,19 @@ CREATE TABLE IF NOT EXISTS applications (
     job_link            TEXT                        DEFAULT NULL,
     dashboard_link      TEXT                        DEFAULT NULL,
 
-    -- Location
-    location_type       ENUM('Remote','Hybrid')     NOT NULL DEFAULT 'Remote',
-    hybrid_location     VARCHAR(255)                DEFAULT NULL,
-    days_onsite         VARCHAR(50)                 DEFAULT NULL,
+    -- Location (v3: added Onsite; hybrid_location renamed to location_detail,
+    -- now also used for Onsite location text)
+    location_type       ENUM('Remote','Hybrid','Onsite') NOT NULL DEFAULT 'Remote',
+    location_detail     VARCHAR(255)                DEFAULT NULL,
+    days_onsite         VARCHAR(50)                 DEFAULT NULL,  -- Hybrid only; hidden in UI for Onsite
 
     -- Application channel
     source              VARCHAR(100)                DEFAULT NULL,
+    referrer_name        VARCHAR(255)                DEFAULT NULL,  -- v3: optional, shown when source = Referral
     applied_through     VARCHAR(100)                DEFAULT NULL,
 
-    -- Resume
-    resume_version      ENUM('TPM','SPO','TIM','Custom') DEFAULT NULL,
+    -- Resume (v3: VARCHAR instead of ENUM, values managed per-user via resume_versions)
+    resume_version      VARCHAR(50)                 DEFAULT NULL,
 
     -- Rating & status
     rating              TINYINT UNSIGNED            DEFAULT NULL,
@@ -104,7 +195,7 @@ CREATE TABLE IF NOT EXISTS applications (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- 4. timeline_entries
+-- 7. timeline_entries
 -- Note: company, position, rating, date_applied are NOT stored here.
 -- They are always read via JOIN with applications.
 -- ============================================================
@@ -129,7 +220,7 @@ CREATE TABLE IF NOT EXISTS timeline_entries (
 
     -- Status
     pending             TINYINT                     NOT NULL DEFAULT 1,
-    date_closed         DATE                        DEFAULT NULL,  -- renamed from date_rejected in v2; NULL only for Ghosted
+    date_closed         DATE                        DEFAULT NULL,  -- NULL only for Ghosted
 
     -- Link to application (required — no orphan timeline entries)
     application_id      INT UNSIGNED                NOT NULL,
@@ -143,7 +234,7 @@ CREATE TABLE IF NOT EXISTS timeline_entries (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- 5. interview_rounds
+-- 8. interview_rounds
 -- ============================================================
 CREATE TABLE IF NOT EXISTS interview_rounds (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -169,8 +260,23 @@ CREATE TABLE IF NOT EXISTS interview_rounds (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- 6. Foreign keys
+-- 9. Foreign keys
 -- ============================================================
+ALTER TABLE resume_versions
+    ADD CONSTRAINT fk_resume_versions_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE;
+
+ALTER TABLE sources
+    ADD CONSTRAINT fk_sources_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE;
+
+ALTER TABLE applied_through_options
+    ADD CONSTRAINT fk_applied_through_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE;
+
 ALTER TABLE applications
     ADD CONSTRAINT fk_app_user
         FOREIGN KEY (user_id) REFERENCES users(id)

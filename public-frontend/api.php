@@ -29,6 +29,9 @@
  *
  *   GET    ?action=stats
  *
+ *   GET    ?action=get_options&type=(resume_versions|sources|applied_through_options)
+ *   POST   ?action=add_option
+ *
  *   GET    ?action=export[&date_from=&date_to=]
  *
  *   POST   ?action=generate_share_token
@@ -255,8 +258,10 @@ if ($action === 'applications') {
     if ($outreach_filter === 'yes') { $where[] = "a.has_outreach = 1"; }
     elseif ($outreach_filter === 'no') { $where[] = "a.has_outreach = 0"; }
     $location_filter = trim($_GET['location_filter'] ?? '');
-    if ($location_filter === 'Remote') { $where[] = "a.location_type = 'Remote'"; }
-    elseif ($location_filter === 'Hybrid') { $where[] = "a.location_type = 'Hybrid'"; }
+    if (in_array($location_filter, ['Remote', 'Hybrid', 'Onsite'], true)) {
+        $where[] = "a.location_type = ?";
+        $params[] = $location_filter;
+    }
     $resume = trim($_GET['resume'] ?? '');
     if ($resume !== '') {
         $versions = array_filter(array_map('trim', explode(',', $resume)));
@@ -275,8 +280,8 @@ if ($action === 'applications') {
     $group_order = "CASE a.status WHEN 'Interviewing' THEN 1 WHEN 'Offer' THEN 2 WHEN 'Applied' THEN 3 WHEN 'Accepted' THEN 4 WHEN 'Rejected' THEN 5 WHEN 'Ghosted' THEN 6 WHEN 'Not Selected' THEN 7 WHEN 'No Answer' THEN 8 WHEN 'Withdrawn' THEN 9 ELSE 10 END";
 
     $sql  = "SELECT a.id, a.date_applied, a.company, a.via_recruiting_firm, a.recruiting_firm,
-                    a.job_title, a.location_type, a.hybrid_location, a.days_onsite,
-                    a.source, a.applied_through, a.resume_version, a.rating, a.status,
+                    a.job_title, a.location_type, a.location_detail, a.days_onsite,
+                    a.source, a.referrer_name, a.applied_through, a.resume_version, a.rating, a.status,
                     a.salary_requested, a.salary_listed, a.salary_type,
                     a.job_link, a.dashboard_link, a.job_id, a.timeline_id,
                     a.cover_letter, a.has_outreach, a.outreach_notes"
@@ -322,22 +327,23 @@ if ($action === 'application_add') {
     $b = body(); $pdo = db(); $uid = authed_uid();
     $stmt = $pdo->prepare("INSERT INTO applications
         (user_id,date_applied,company,via_recruiting_firm,recruiting_firm,job_title,
-         location_type,hybrid_location,days_onsite,source,applied_through,
+         location_type,location_detail,days_onsite,source,referrer_name,applied_through,
          resume_version,rating,status,job_id,job_link,dashboard_link,
          salary_requested,salary_listed,salary_type,contacts,notes,job_description,
          cover_letter,has_outreach,outreach_notes)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         $uid,
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
         str_or_null($b,'company'), (int)($b['via_recruiting_firm']??0), str_or_null($b,'recruiting_firm'),
-        trim($b['job_title']??''), $b['location_type']??'Remote', str_or_null($b,'hybrid_location'),
-        str_or_null($b,'days_onsite'), str_or_null($b,'source'), str_or_null($b,'applied_through'),
-        str_or_null($b,'resume_version'), int_or_null($b,'rating'), $b['status']??'Applied',
-        str_or_null($b,'job_id'), str_or_null($b,'job_link'), str_or_null($b,'dashboard_link'),
-        str_or_null($b,'salary_requested'), str_or_null($b,'salary_listed'), $b['salary_type']??'Yearly',
-        str_or_null($b,'contacts'), str_or_null($b,'notes'), str_or_null($b,'job_description'),
-        int_or_null($b,'cover_letter'), int_or_null($b,'has_outreach'), str_or_null($b,'outreach_notes'),
+        trim($b['job_title']??''), $b['location_type']??'Remote', str_or_null($b,'location_detail'),
+        str_or_null($b,'days_onsite'), str_or_null($b,'source'), str_or_null($b,'referrer_name'),
+        str_or_null($b,'applied_through'), str_or_null($b,'resume_version'), int_or_null($b,'rating'),
+        $b['status']??'Applied', str_or_null($b,'job_id'), str_or_null($b,'job_link'),
+        str_or_null($b,'dashboard_link'), str_or_null($b,'salary_requested'), str_or_null($b,'salary_listed'),
+        $b['salary_type']??'Yearly', str_or_null($b,'contacts'), str_or_null($b,'notes'),
+        str_or_null($b,'job_description'), int_or_null($b,'cover_letter'), int_or_null($b,'has_outreach'),
+        str_or_null($b,'outreach_notes'),
     ]);
     $new_id = (int)$pdo->lastInsertId();
     if (($b['status']??'') === 'Interviewing') _auto_create_timeline($pdo, $new_id, $b);
@@ -353,7 +359,7 @@ if ($action === 'application_update') {
     if (!$current) fail('Not found', 404);
     $stmt = $pdo->prepare("UPDATE applications SET
         date_applied=?,company=?,via_recruiting_firm=?,recruiting_firm=?,job_title=?,
-        location_type=?,hybrid_location=?,days_onsite=?,source=?,applied_through=?,
+        location_type=?,location_detail=?,days_onsite=?,source=?,referrer_name=?,applied_through=?,
         resume_version=?,rating=?,status=?,job_id=?,job_link=?,dashboard_link=?,
         salary_requested=?,salary_listed=?,salary_type=?,contacts=?,notes=?,job_description=?,
         cover_letter=?,has_outreach=?,outreach_notes=?
@@ -361,14 +367,14 @@ if ($action === 'application_update') {
     $stmt->execute([
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
         str_or_null($b,'company'), (int)($b['via_recruiting_firm']??0), str_or_null($b,'recruiting_firm'),
-        trim($b['job_title']??''), $b['location_type']??'Remote', str_or_null($b,'hybrid_location'),
-        str_or_null($b,'days_onsite'), str_or_null($b,'source'), str_or_null($b,'applied_through'),
-        str_or_null($b,'resume_version'), int_or_null($b,'rating'), $b['status']??'Applied',
-        str_or_null($b,'job_id'), str_or_null($b,'job_link'), str_or_null($b,'dashboard_link'),
-        str_or_null($b,'salary_requested'), str_or_null($b,'salary_listed'), $b['salary_type']??'Yearly',
-        str_or_null($b,'contacts'), str_or_null($b,'notes'), str_or_null($b,'job_description'),
-        int_or_null($b,'cover_letter'), int_or_null($b,'has_outreach'), str_or_null($b,'outreach_notes'),
-        $id, $uid,
+        trim($b['job_title']??''), $b['location_type']??'Remote', str_or_null($b,'location_detail'),
+        str_or_null($b,'days_onsite'), str_or_null($b,'source'), str_or_null($b,'referrer_name'),
+        str_or_null($b,'applied_through'), str_or_null($b,'resume_version'), int_or_null($b,'rating'),
+        $b['status']??'Applied', str_or_null($b,'job_id'), str_or_null($b,'job_link'),
+        str_or_null($b,'dashboard_link'), str_or_null($b,'salary_requested'), str_or_null($b,'salary_listed'),
+        $b['salary_type']??'Yearly', str_or_null($b,'contacts'), str_or_null($b,'notes'),
+        str_or_null($b,'job_description'), int_or_null($b,'cover_letter'), int_or_null($b,'has_outreach'),
+        str_or_null($b,'outreach_notes'), $id, $uid,
     ]);
     if (($b['status']??'') === 'Interviewing' && !$current['timeline_id'])
         _auto_create_timeline($pdo, $id, $b);
@@ -568,7 +574,7 @@ if ($action === 'share') {
 
     $slim = !empty($_GET['slim']);
     $cols = $slim
-        ? "a.id,a.date_applied,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.hybrid_location,a.days_onsite,a.source,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.notes,a.timeline_id"
+        ? "a.id,a.date_applied,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.location_detail,a.days_onsite,a.source,a.referrer_name,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.notes,a.timeline_id"
         : "a.*";
 
     $stmt = $pdo->prepare("
@@ -675,6 +681,45 @@ if ($action === 'application_status') {
         }
     } elseif ($app && !$app['timeline_id'] && $status === 'Interviewing') {
         _auto_create_timeline($pdo, $id, $app);
+    }
+    ok();
+}
+
+// ── Lookup options — get merged list (global defaults + user's own) ───────────
+if ($action === 'get_options') {
+    auth_required();
+    $uid  = current_user_id();
+    $type = trim($_GET['type'] ?? '');
+    if (!in_array($type, ['resume_versions', 'sources', 'applied_through_options'], true))
+        fail('Invalid type');
+    $pdo = db();
+    if ($type === 'resume_versions') {
+        $stmt = $pdo->prepare("SELECT name FROM resume_versions WHERE user_id=? ORDER BY name ASC");
+        $stmt->execute([$uid]);
+    } else {
+        $stmt = $pdo->prepare("SELECT name FROM $type WHERE (user_id IS NULL OR user_id=?) ORDER BY name ASC");
+        $stmt->execute([$uid]);
+    }
+    ok($stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
+// ── Lookup options — add user-scoped entry ────────────────────────────────────
+if ($action === 'add_option') {
+    auth_required();
+    $b    = body();
+    $uid  = current_user_id();
+    $type = trim($b['type'] ?? '');
+    $name = trim($b['name'] ?? '');
+    if (!in_array($type, ['resume_versions', 'sources', 'applied_through_options'], true))
+        fail('Invalid type');
+    if ($name === '') fail('Name is required');
+    $pdo = db();
+    try {
+        $stmt = $pdo->prepare("INSERT INTO $type (user_id, name) VALUES (?, ?)");
+        $stmt->execute([$uid, $name]);
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') ok(); // duplicate — ignore gracefully
+        throw $e;
     }
     ok();
 }

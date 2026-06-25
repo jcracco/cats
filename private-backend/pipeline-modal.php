@@ -67,6 +67,59 @@ function DeleteConfirm({ label, onConfirm, onCancel }) {
   );
 }
 
+// ── LookupDropdown ────────────────────────────────────────────────────────────
+// Loads options from the get_options API and supports inline "Add new" entry.
+function LookupDropdown({ type, value, onChange, placeholder="Select…" }) {
+  const [options,  setOptions]  = useState([]);
+  const [adding,   setAdding]   = useState(false);
+  const [newName,  setNewName]  = useState("");
+  const [saving,   setSaving]   = useState(false);
+
+  useEffect(() => {
+    api("get_options","GET",null,{type}).then(setOptions).catch(()=>{});
+  }, [type]);
+
+  const submitNew = async () => {
+    const name = newName.trim();
+    if (!name || saving) return;
+    setSaving(true);
+    try {
+      await api("add_option","POST",{type,name});
+      const updated = await api("get_options","GET",null,{type});
+      setOptions(updated);
+      onChange(name);
+      setAdding(false);
+      setNewName("");
+    } catch(e) { alert("Could not add option: "+e.message); }
+    setSaving(false);
+  };
+
+  if (adding) {
+    return (
+      <div style={{ display:"flex",gap:6,alignItems:"center" }}>
+        <input className="form-input" style={{ flex:1 }} value={newName}
+          onChange={e=>setNewName(e.target.value)} placeholder="Enter name…" autoFocus
+          onKeyDown={e=>{ if(e.key==="Enter") submitNew(); if(e.key==="Escape"){ setAdding(false); setNewName(""); } }} />
+        <button className="btn-primary" style={{ fontSize:11,padding:"5px 10px",whiteSpace:"nowrap" }}
+          onClick={submitNew} disabled={saving||!newName.trim()}>{saving?"…":"Add"}</button>
+        <button className="btn-secondary" style={{ fontSize:11,padding:"5px 10px" }}
+          onClick={()=>{ setAdding(false); setNewName(""); }}>✕</button>
+      </div>
+    );
+  }
+
+  // Ensure current value shows even if options haven't loaded yet
+  const opts = value && !options.includes(value) ? [value, ...options] : options;
+  return (
+    <select className="form-select" value={value}
+      onChange={e=>{ if(e.target.value==="__add_new__") setAdding(true); else onChange(e.target.value); }}>
+      <option value="">{placeholder}</option>
+      {opts.map(o=><option key={o} value={o}>{o}</option>)}
+      <option value="__add_new__">+ Add new…</option>
+    </select>
+  );
+}
+
 // ── AppModal ──────────────────────────────────────────────────────────────────
 // defaultTab: "info" | "interview"
 function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info" }) {
@@ -82,8 +135,8 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
   const emptyForm = () => ({
     date_applied: localToday(),
     company:"", via_recruiting_firm:false, recruiting_firm:"",
-    job_title:"", location_type:"Remote", hybrid_location:"", days_onsite:"",
-    source:"", applied_through:"", resume_version:"", rating:"",
+    job_title:"", location_type:"Remote", location_detail:"", days_onsite:"",
+    source:"", referrer_name:"", applied_through:"", resume_version:"", rating:"",
     status:"Applied", job_id:"", job_link:"", dashboard_link:"",
     salary_requested:"", salary_listed:"", salary_type:"Yearly",
     contacts:"", notes:"", job_description:"",
@@ -143,8 +196,8 @@ const STATUS_TO_TL = {
         date_applied:a.date_applied||"", company:a.company||"",
         via_recruiting_firm:!!a.via_recruiting_firm, recruiting_firm:a.recruiting_firm||"",
         job_title:a.job_title||"", location_type:a.location_type||"Remote",
-        hybrid_location:a.hybrid_location||"", days_onsite:a.days_onsite||"",
-        source:a.source||"", applied_through:a.applied_through||"",
+        location_detail:a.location_detail||"", days_onsite:a.days_onsite||"",
+        source:a.source||"", referrer_name:a.referrer_name||"", applied_through:a.applied_through||"",
         resume_version:a.resume_version||"", rating:a.rating??'',
         status:a.status||"Applied", job_id:a.job_id||"",
         job_link:a.job_link||"", dashboard_link:a.dashboard_link||"",
@@ -353,68 +406,50 @@ const STATUS_TO_TL = {
               <div className="form-row">
                 <FormField label="Source *">
                   {editing||isNew ? (
-                    <div>
-                      <select className="form-select"
-                        value={SOURCES.includes(form.source) ? form.source : (form.source ? "__custom_src__" : "")}
-                        onChange={e=>{
-                          if (e.target.value === "__custom_src__") { sf("source",""); setForm(f=>({...f,_customSrc:true})); }
-                          else { sf("source", e.target.value); setForm(f=>({...f,_customSrc:false})); }
-                        }}>
-                        <option value="">Select…</option>
-                        {SOURCES.map(s=><option key={s} value={s}>{s}</option>)}
-                        <option value="__custom_src__">Other (type below)…</option>
-                      </select>
-                      {(form._customSrc || (!SOURCES.includes(form.source) && form.source !== "")) && (
-                        <input className="form-input" style={{ marginTop:6 }} value={form.source} onChange={e=>sf("source",e.target.value)} placeholder="Enter source name" autoFocus />
-                      )}
-                    </div>
+                    <LookupDropdown type="sources" value={form.source} onChange={v=>{ sf("source",v); if(v!=="Referral") sf("referrer_name",""); }} />
                   ) : form.source ? (() => {
                       const sc = SOURCE_COLORS[form.source];
                       return <span className="source-pill" style={sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}}>{form.source}</span>;
                     })() : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>—</span>}
                 </FormField>
                 <FormField label="Applied Through *">
-                  {editing||isNew ? (
-                    <div>
-                      <select className="form-select"
-                        value={APPLIED_THROUGH.includes(form.applied_through) ? form.applied_through : (form.applied_through ? "__custom__" : "")}
-                        onChange={e=>{
-                          if (e.target.value === "__custom__") { sf("applied_through",""); setForm(f=>({...f,_customAts:true})); }
-                          else { sf("applied_through", e.target.value); setForm(f=>({...f,_customAts:false})); }
-                        }}>
-                        <option value="">Select…</option>
-                        {APPLIED_THROUGH.map(a=><option key={a} value={a}>{a}</option>)}
-                        <option value="__custom__">Other (type below)…</option>
-                      </select>
-                      {(form._customAts || (!APPLIED_THROUGH.includes(form.applied_through) && form.applied_through !== "")) && (
-                        <input className="form-input" style={{ marginTop:6 }} value={form.applied_through} onChange={e=>sf("applied_through",e.target.value)} placeholder="Enter ATS or platform name" autoFocus />
-                      )}
-                    </div>
-                  ) : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{form.applied_through||"—"}</span>}
+                  {editing||isNew
+                    ? <LookupDropdown type="applied_through_options" value={form.applied_through} onChange={v=>sf("applied_through",v)} />
+                    : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{form.applied_through||"—"}</span>}
                 </FormField>
               </div>
+              {(editing||isNew) && form.source==="Referral" && (
+                <FormField label="Referrer Name">
+                  <input className="form-input" value={form.referrer_name} onChange={e=>sf("referrer_name",e.target.value)} placeholder="Who referred you?" />
+                </FormField>
+              )}
+              {!editing && !isNew && form.referrer_name && (
+                <div style={{ fontSize:12,color:"var(--text-secondary)",marginBottom:12 }}>Referred by: {form.referrer_name}</div>
+              )}
 
               <FormField label="Location *">
                 {editing||isNew ? (
                   <div>
                     <div className="form-radio-group" style={{ marginBottom:8 }}>
-                      {["Remote","Hybrid"].map(v=>(
+                      {["Remote","Hybrid","Onsite"].map(v=>(
                         <label key={v} className="form-radio-label">
                           <input type="radio" checked={form.location_type===v} onChange={()=>sf("location_type",v)} /> {v}
                         </label>
                       ))}
                     </div>
-                    {form.location_type==="Hybrid" && (
+                    {(form.location_type==="Hybrid"||form.location_type==="Onsite") && (
                       <div className="form-row">
-                        <input className="form-input" placeholder="Location" value={form.hybrid_location} onChange={e=>sf("hybrid_location",e.target.value)} />
-                        <input className="form-input" placeholder="Days onsite (optional)" value={form.days_onsite} onChange={e=>sf("days_onsite",e.target.value)} />
+                        <input className="form-input" placeholder="Location" value={form.location_detail} onChange={e=>sf("location_detail",e.target.value)} />
+                        {form.location_type==="Hybrid" && (
+                          <input className="form-input" placeholder="Days onsite (optional)" value={form.days_onsite} onChange={e=>sf("days_onsite",e.target.value)} />
+                        )}
                       </div>
                     )}
                   </div>
                 ) : (
                   <span style={{ fontSize:13,color:"var(--text-secondary)" }}>
-                    {form.location_type}{form.hybrid_location?` — ${form.hybrid_location}`:""}
-                    {form.days_onsite?` (${form.days_onsite} days)`:""}
+                    {form.location_type}{form.location_detail?` — ${form.location_detail}`:""}
+                    {form.location_type==="Hybrid"&&form.days_onsite?` (${form.days_onsite} days)`:""}
                   </span>
                 )}
               </FormField>
@@ -466,23 +501,9 @@ const STATUS_TO_TL = {
                 <div className="modal-section-title">Details</div>
                 <div className="form-row">
                   <FormField label="Resume Version">
-                    {editing||isNew ? (
-                      <div>
-                        <select className="form-select"
-                          value={RESUME_VERSIONS.includes(form.resume_version) ? form.resume_version : (form.resume_version ? "__custom_res__" : "")}
-                          onChange={e=>{
-                            if (e.target.value === "__custom_res__") { sf("resume_version",""); setForm(f=>({...f,_customRes:true})); }
-                            else { sf("resume_version", e.target.value); setForm(f=>({...f,_customRes:false})); }
-                          }}>
-                          <option value="">—</option>
-                          {RESUME_VERSIONS.map(r=><option key={r} value={r}>{r}</option>)}
-                          <option value="__custom_res__">Other (type below)…</option>
-                        </select>
-                        {(form._customRes || (!RESUME_VERSIONS.includes(form.resume_version) && form.resume_version !== "")) && (
-                          <input className="form-input" style={{ marginTop:6 }} value={form.resume_version} onChange={e=>sf("resume_version",e.target.value)} placeholder="e.g. TPM-Acme, SPO-v2…" autoFocus />
-                        )}
-                      </div>
-                    ) : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>{form.resume_version||"—"}</span>}
+                    {editing||isNew
+                      ? <LookupDropdown type="resume_versions" value={form.resume_version} onChange={v=>sf("resume_version",v)} placeholder="—" />
+                      : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>{form.resume_version||"—"}</span>}
                   </FormField>
                   <FormField label="Job ID">
                     {editing||isNew ? <input className="form-input" value={form.job_id} onChange={e=>sf("job_id",e.target.value)} /> : <span style={{ fontSize:12,color:"var(--text-secondary)" }}>{form.job_id||"—"}</span>}
@@ -800,9 +821,9 @@ function ExportModal({ onClose }) {
       }
 
       const rows = apps.map(a => {
-        const loc = a.location_type==='Hybrid'
-          ? `Hybrid${a.hybrid_location?` — ${a.hybrid_location}`:''}`
-          : (a.location_type||'Remote');
+        const loc = a.location_type==='Remote'
+          ? 'Remote'
+          : `${a.location_type||'Remote'}${a.location_detail?` — ${a.location_detail}`:''}${a.location_type==='Hybrid'&&a.days_onsite?` (${a.days_onsite} days)`:''}`;
 
         const row = [a.date_applied||'', (a.company||a.recruiting_firm)||'', a.job_title||''];
         EXPORT_FIELDS.forEach(f => {

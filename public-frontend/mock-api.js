@@ -15,7 +15,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Senior Technical Program Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "LinkedIn Easy Apply",
@@ -44,7 +44,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Technical Program Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "LinkedIn Easy Apply",
@@ -73,7 +73,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Senior Product Owner",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "LinkedIn Easy Apply",
@@ -102,9 +102,10 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Senior Product Owner",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Referral",
+    "referrer_name": "Alex Torres",
     "applied_through": "Email",
     "resume_version": "SPO",
     "rating": 88,
@@ -131,7 +132,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Product Owner",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "LinkedIn Easy Apply",
@@ -160,7 +161,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Agile Delivery Lead",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "LinkedIn Easy Apply",
@@ -189,7 +190,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Sr. Product Owner",
     "location_type": "Hybrid",
-    "hybrid_location": "Boston",
+    "location_detail": "Boston",
     "days_onsite": "2-3",
     "source": "LinkedIn",
     "applied_through": "Workday",
@@ -218,7 +219,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Technical Delivery Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Indeed",
     "applied_through": "Greenhouse",
@@ -247,7 +248,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Program Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Company website",
     "applied_through": "iCIMS",
@@ -276,7 +277,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Senior Product Manager",
     "location_type": "Hybrid",
-    "hybrid_location": "Cambridge",
+    "location_detail": "Cambridge",
     "days_onsite": "2-3",
     "source": "Recruiter Outreach",
     "applied_through": "Indeed",
@@ -305,9 +306,10 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Software Delivery Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Referral",
+    "referrer_name": "Marcus Webb",
     "applied_through": "Lever",
     "resume_version": "TPM",
     "rating": 77,
@@ -334,7 +336,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Product Owner",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Jobgether",
     "applied_through": "Ashby",
@@ -363,7 +365,7 @@ const SEED_APPS = [
     "recruiting_firm": "Talentify Group",
     "job_title": "Agile Delivery Lead",
     "location_type": "Hybrid",
-    "hybrid_location": "Waltham",
+    "location_detail": "Waltham",
     "days_onsite": "2-3",
     "source": "BuiltIn",
     "applied_through": "SmartRecruiters",
@@ -392,7 +394,7 @@ const SEED_APPS = [
     "recruiting_firm": "TechForce Partners",
     "job_title": "Sr. Product Owner",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Dice",
     "applied_through": "Workday",
@@ -421,7 +423,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Technical Delivery Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "Greenhouse",
@@ -450,7 +452,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Program Manager",
     "location_type": "Hybrid",
-    "hybrid_location": "Somerville",
+    "location_detail": "Somerville",
     "days_onsite": "2-3",
     "source": "LinkedIn",
     "applied_through": "Email",
@@ -479,7 +481,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Senior Product Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "LinkedIn Easy Apply",
@@ -508,7 +510,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Software Delivery Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Indeed",
     "applied_through": "LinkedIn Easy Apply",
@@ -537,7 +539,7 @@ const SEED_APPS = [
     "recruiting_firm": "Talentify Group",
     "job_title": "Product Owner",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Company website",
     "applied_through": "Workday",
@@ -566,7 +568,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Agile Delivery Lead",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "LinkedIn Easy Apply",
@@ -595,7 +597,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Sr. Product Owner",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "LinkedIn Easy Apply",
@@ -624,7 +626,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Technical Delivery Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "LinkedIn",
     "applied_through": "Workday",
@@ -653,7 +655,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Program Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Indeed",
     "applied_through": "Greenhouse",
@@ -682,7 +684,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Senior Product Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Company website",
     "applied_through": "iCIMS",
@@ -711,7 +713,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Software Delivery Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Recruiter Outreach",
     "applied_through": "Indeed",
@@ -740,7 +742,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Product Owner",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Referral",
     "applied_through": "Lever",
@@ -769,7 +771,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Agile Delivery Lead",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Jobgether",
     "applied_through": "Ashby",
@@ -798,7 +800,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Sr. Product Owner",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "BuiltIn",
     "applied_through": "SmartRecruiters",
@@ -827,7 +829,7 @@ const SEED_APPS = [
     "recruiting_firm": null,
     "job_title": "Technical Delivery Manager",
     "location_type": "Remote",
-    "hybrid_location": null,
+    "location_detail": null,
     "days_onsite": null,
     "source": "Dice",
     "applied_through": "Workday",
@@ -847,6 +849,36 @@ const SEED_APPS = [
     "notes": null,
     "job_description": null,
     "timeline_id": 9
+  },
+  {
+    "id": 30,
+    "date_applied": "2026-05-19",
+    "company": "Ironclad Platforms",
+    "via_recruiting_firm": 0,
+    "recruiting_firm": null,
+    "job_title": "Senior Program Manager",
+    "location_type": "Onsite",
+    "location_detail": "New York, NY",
+    "days_onsite": null,
+    "source": "Company website",
+    "referrer_name": null,
+    "applied_through": "Workday",
+    "resume_version": "TPM-Acme",
+    "rating": 66,
+    "status": "Applied",
+    "job_id": null,
+    "job_link": "https://example.com/jobs/30",
+    "dashboard_link": null,
+    "salary_requested": "140",
+    "salary_listed": "135-155",
+    "salary_type": "Yearly",
+    "contacts": null,
+    "cover_letter": 0,
+    "has_outreach": 0,
+    "outreach_notes": null,
+    "notes": null,
+    "job_description": null,
+    "timeline_id": null
   }
 ];
 const SEED_TIMELINES = [
@@ -1088,6 +1120,31 @@ const SEED_ROUNDS = [
 
 
 
+// ── Seed lookup options (global defaults + a few demo user-specific entries) ──
+const SEED_OPTIONS = {
+  resume_versions: ["SPO", "SPO-v2", "TIM", "TPM", "TPM-Acme"],
+  sources: [
+    "AngelList",           // demo user entry
+    "BuiltIn", "Company website", "Cybercoders", "Dice", "Hiring Café",
+    "Indeed", "Jobgether", "LinkedIn", "Other", "Recruiter Outreach",
+    "Recruiting Agency", "Referral",
+    "Wellfound",           // demo user entry
+  ],
+  applied_through_options: [
+    "ADP", "ApplyToJob", "Ashby", "Avature", "Bamboo",
+    "Beamery",             // demo user entry
+    "Breezy", "Dayforce", "Dice", "Dover", "Eightfold", "Email",
+    "Gem", "Greenhouse", "Hirebridge", "Humi", "Indeed", "JazzHR",
+    "Jobvite", "Kronos", "Kula", "Lever", "LinkedIn Easy Apply",
+    "Oracle", "Oracle Cloud", "Other/Unknown", "Paycom", "Paycor",
+    "Paylocity",
+    "Phenom",              // demo user entry
+    "Pinpoint", "Recruiting Firm Portal", "Rippling", "SAP SuccessFactors",
+    "SmartRecruiters", "Taleo", "Teamtailor", "Trakstar", "UltiPro",
+    "Workable", "Workday", "iCIMS",
+  ],
+};
+
 // ── Date helper — keeps demo data looking recent ─────────────────────────────
 function dAgo(n) {
   const d = new Date();
@@ -1110,6 +1167,10 @@ function initSeedDates() {
     if (!('offer_date'  in tl)) tl.offer_date  = null;
     if (!('offer_notes' in tl)) tl.offer_notes = null;
   });
+  // Ensure v3 referrer_name exists on all seed apps
+  SEED_APPS.forEach(a => {
+    if (!('referrer_name' in a)) a.referrer_name = null;
+  });
 }
 initSeedDates();
 
@@ -1125,6 +1186,7 @@ function loadState() {
     apps:      JSON.parse(JSON.stringify(SEED_APPS)),
     timelines: JSON.parse(JSON.stringify(SEED_TIMELINES)),
     rounds:    JSON.parse(JSON.stringify(SEED_ROUNDS)),
+    options:   JSON.parse(JSON.stringify(SEED_OPTIONS)),
     auth:      false,
     nextAppId: Math.max(...SEED_APPS.map(a=>a.id)) + 1,
     nextTlId:  Math.max(...SEED_TIMELINES.map(t=>t.id)) + 1,
@@ -1449,6 +1511,31 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
         rounds,
       };
     });
+  }
+
+  // ── Lookup options ─────────────────────────────────────────────────────────
+  if (action === "get_options") {
+    const type = params.type;
+    if (!["resume_versions","sources","applied_through_options"].includes(type))
+      throw new Error("Invalid type");
+    const list = s.options?.[type] ?? SEED_OPTIONS[type] ?? [];
+    return [...list].sort((a, b) => a.localeCompare(b));
+  }
+
+  if (action === "add_option") {
+    if (!s.auth) throw new Error("Not authenticated");
+    const { type, name } = body || {};
+    if (!["resume_versions","sources","applied_through_options"].includes(type))
+      throw new Error("Invalid type");
+    const trimmed = (name || "").trim();
+    if (!trimmed) throw new Error("Name is required");
+    if (!s.options) s.options = JSON.parse(JSON.stringify(SEED_OPTIONS));
+    if (!s.options[type].includes(trimmed)) {
+      s.options[type].push(trimmed);
+      s.options[type].sort((a, b) => a.localeCompare(b));
+    }
+    saveState(s);
+    return null;
   }
 
   // ── Share token (no-op in demo — share is disabled in demo mode) ─────────────

@@ -20,7 +20,7 @@ if (isset($_GET['share']) && isset($_GET['format']) && $_GET['format'] === 'json
 
     $slim = !empty($_GET['slim']);
     $cols = $slim
-        ? "a.id,a.date_applied,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.hybrid_location,a.days_onsite,a.source,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.notes,a.timeline_id"
+        ? "a.id,a.date_applied,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.location_detail,a.days_onsite,a.source,a.referrer_name,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.notes,a.timeline_id"
         : "a.*";
 
     $stmt = $pdo->prepare("
