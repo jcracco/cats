@@ -637,11 +637,11 @@ function ExtrasDropdown({ value, onChange }) {
 }
 
 // ── Filter bar (second row, shown when Filters is toggled) ────────────────────
-function FilterBar({ statusFilter, setStatusFilter, resumeFilter, setResumeFilter, sourceFilter, setSourceFilter, appliedFilter, setAppliedFilter, allSources, allAppliedThrough, ratingMin, setRatingMin, salaryMin, setSalaryMin, salaryType, setSalaryType, dateFrom, setDateFrom, dateTo, setDateTo, extrasFilter, setExtrasFilter, onResetAll }) {
+function FilterBar({ statusFilter, setStatusFilter, resumeFilter, setResumeFilter, sourceFilter, setSourceFilter, appliedFilter, setAppliedFilter, allResumeVersions, allSources, allAppliedThrough, ratingMin, setRatingMin, salaryMin, setSalaryMin, salaryType, setSalaryType, dateFrom, setDateFrom, dateTo, setDateTo, extrasFilter, setExtrasFilter, onResetAll }) {
   return (
     <div className="filters" style={{ marginTop:-8, marginBottom:16, animation:"dropdownIn 0.14s ease" }}>
       <StatusDropdown value={statusFilter} onChange={setStatusFilter} />
-      <MultiDropdown label="Resume" options={RESUME_VERSIONS} value={resumeFilter} onChange={setResumeFilter} />
+      <MultiDropdown label="Resume" options={allResumeVersions} value={resumeFilter} onChange={setResumeFilter} />
       <MultiDropdown label="Source" options={allSources} value={sourceFilter} onChange={setSourceFilter} />
       <MultiDropdown label="Applied Via" options={allAppliedThrough} value={appliedFilter} onChange={setAppliedFilter} />
       <ExtrasDropdown value={extrasFilter} onChange={setExtrasFilter} />
@@ -862,10 +862,11 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
   const [dateFrom, setDateFrom]       = useState(null);
   const [dateTo, setDateTo]           = useState(null);
   const [sourceFilter, setSourceF]    = useState([]);
-  const [allSources, setAllSources]   = useState([...SOURCES]);
+  const [allSources, setAllSources]   = useState([]);
   const [salaryMin, setSalaryMin]     = useState(0);
   const [salaryType, setSalaryType]   = useState('Yearly');
-  const [allAppliedThrough, setAllAT] = useState([...APPLIED_THROUGH]);
+  const [allAppliedThrough, setAllAT] = useState([]);
+  const [allResumeVersions, setAllRV] = useState([]);
   const [extrasFilter, setExtrasF]    = useState({ coverLetter:[], outreach:[], location:[] });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -889,23 +890,9 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
 
   useEffect(() => {
     api("stats").then(setStats).catch(console.error);
-    // Load all distinct source + applied_through values from DB
-    api("applications","GET",null,{sort:"date_desc"}).then(apps => {
-      // Applied through
-      const atVals = [...new Set((apps||[]).map(a=>a.applied_through).filter(Boolean))].sort();
-      const merged = [...new Set([...APPLIED_THROUGH, ...atVals])].sort((a,b)=>{
-        const pinned = ["LinkedIn Easy Apply","Indeed","Dice","Cybercoders","Workday","Email","Recruiting Firm Portal","Other/Unknown"];
-        const ai = pinned.indexOf(a), bi = pinned.indexOf(b);
-        if(ai>=0 && bi>=0) return ai-bi;
-        if(ai>=0) return -1; if(bi>=0) return 1;
-        return a.localeCompare(b);
-      });
-      setAllAT(merged);
-      // Sources
-      const srcVals = [...new Set((apps||[]).map(a=>a.source).filter(Boolean))].sort();
-      const mergedSrc = [...new Set([...SOURCES, ...srcVals])].sort((a,b)=>a==="Other"?1:b==="Other"?-1:a.localeCompare(b));
-      setAllSources(mergedSrc);
-    }).catch(console.error);
+    api("get_options","GET",null,{type:"sources"}).then(setAllSources).catch(console.error);
+    api("get_options","GET",null,{type:"applied_through_options"}).then(setAllAT).catch(console.error);
+    api("get_options","GET",null,{type:"resume_versions"}).then(setAllRV).catch(console.error);
   }, [refreshKey]);
 
   useEffect(() => {
@@ -943,7 +930,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
           resumeFilter={resumeFilter} setResumeFilter={setResumeF}
           sourceFilter={sourceFilter} setSourceFilter={setSourceF}
           appliedFilter={appliedFilter} setAppliedFilter={setAppliedF}
-          allSources={allSources} allAppliedThrough={allAppliedThrough}
+          allResumeVersions={allResumeVersions} allSources={allSources} allAppliedThrough={allAppliedThrough}
           ratingMin={ratingMin} setRatingMin={setRatingMin}
           salaryMin={salaryMin} setSalaryMin={setSalaryMin}
           salaryType={salaryType} setSalaryType={setSalaryType}
