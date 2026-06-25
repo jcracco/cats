@@ -131,6 +131,7 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
   const [delConf, setDelConf] = useState(false);
   const [showJD, setShowJD]   = useState(isNew);
   const [copiedJD, setCopiedJD] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const emptyForm = () => ({
     date_applied: localToday(),
@@ -238,6 +239,18 @@ const STATUS_TO_TL = {
   },[delConf]);
 
   const save = async () => {
+    const needFirm  = form.via_recruiting_firm;
+    const companyOk = needFirm ? form.recruiting_firm.trim() : form.company.trim();
+    const titleOk   = form.job_title.trim();
+    if (!companyOk || !titleOk) {
+      setFormError(
+        !companyOk && !titleOk ? "Company and Job Title are required."
+          : !companyOk ? (needFirm ? "Recruiting Firm is required." : "Company is required.")
+          : "Job Title is required."
+      );
+      return;
+    }
+    setFormError("");
     setSaving(true);
     try {
       const body = {...form, via_recruiting_firm:form.via_recruiting_firm?1:0, cover_letter:form.cover_letter?1:0, has_outreach:form.has_outreach?1:0};
@@ -394,7 +407,7 @@ const STATUS_TO_TL = {
                     ? <input className="form-input" type="date" value={form.date_applied} onChange={e=>sf("date_applied",e.target.value)} />
                     : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{form.date_applied}</span>}
                 </FormField>
-                <FormField label="Rating (0–100) *">
+                <FormField label="Rating (0–100)">
                   {editing||isNew
                     ? <input className="form-input" type="number" min={0} max={100} value={form.rating} onChange={e=>sf("rating",e.target.value)} />
                     : (form.rating !== '' && form.rating !== null && form.rating !== undefined
@@ -404,7 +417,7 @@ const STATUS_TO_TL = {
               </div>
 
               <div className="form-row">
-                <FormField label="Source *">
+                <FormField label="Source">
                   {editing||isNew ? (
                     <LookupDropdown type="sources" value={form.source} onChange={v=>{ sf("source",v); if(v!=="Referral") sf("referrer_name",""); }} />
                   ) : form.source ? (() => {
@@ -412,7 +425,7 @@ const STATUS_TO_TL = {
                       return <span className="source-pill" style={sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}}>{form.source}</span>;
                     })() : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>—</span>}
                 </FormField>
-                <FormField label="Applied Through *">
+                <FormField label="Applied Through">
                   {editing||isNew
                     ? <LookupDropdown type="applied_through_options" value={form.applied_through} onChange={v=>sf("applied_through",v)} />
                     : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{form.applied_through||"—"}</span>}
@@ -427,7 +440,7 @@ const STATUS_TO_TL = {
                 <div style={{ fontSize:12,color:"var(--text-secondary)",marginBottom:12 }}>Referred by: {form.referrer_name}</div>
               )}
 
-              <FormField label="Location *">
+              <FormField label="Location">
                 {editing||isNew ? (
                   <div>
                     <div className="form-radio-group" style={{ marginBottom:8 }}>
@@ -743,7 +756,8 @@ const STATUS_TO_TL = {
             <button className="btn-primary" onClick={save} disabled={saving}>
               {saving ? "Saving…" : (isNew ? "Add Application" : "Save Changes")}
             </button>
-            {!isNew && <button className="btn-secondary" onClick={()=>setEditing(false)}>Cancel</button>}
+            {!isNew && <button className="btn-secondary" onClick={()=>{ setEditing(false); setFormError(""); }}>Cancel</button>}
+            {formError && <span style={{ fontSize:11, color:"#f87171", marginLeft:4 }}>{formError}</span>}
           </div>
         )}
       </div>
