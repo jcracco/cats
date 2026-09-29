@@ -294,6 +294,52 @@ if ($action === 'applications') {
     ok($stmt->fetchAll());
 }
 
+// ── Interview ordinal numbering ────────────────────────────────────────────────
+// Assigns each screening + interview round a global position across the user's
+// entire history, ordered by date. Ties on the same date are broken by card
+// order within the same application (screening, then round_order), or by the
+// underlying row id across different applications.
+function _interview_ordinals(PDO $pdo, int $uid): array {
+    $screenings = $pdo->prepare("
+        SELECT t.id, t.application_id, t.date_screening AS event_date
+        FROM timeline_entries t
+        JOIN applications a ON t.application_id = a.id
+        WHERE a.user_id=? AND t.date_screening IS NOT NULL
+    ");
+    $screenings->execute([$uid]);
+    $rounds = $pdo->prepare("
+        SELECT r.id, t.application_id, r.interview_date AS event_date, r.round_order
+        FROM interview_rounds r
+        JOIN timeline_entries t ON r.timeline_id = t.id
+        JOIN applications a ON t.application_id = a.id
+        WHERE a.user_id=? AND r.interview_date IS NOT NULL
+    ");
+    $rounds->execute([$uid]);
+
+    $events = [];
+    foreach ($screenings->fetchAll() as $s) {
+        $events[] = ['type'=>'screening', 'id'=>(int)$s['id'], 'application_id'=>(int)$s['application_id'],
+                      'date'=>$s['event_date'], 'round_order'=>0];
+    }
+    foreach ($rounds->fetchAll() as $r) {
+        $events[] = ['type'=>'round', 'id'=>(int)$r['id'], 'application_id'=>(int)$r['application_id'],
+                      'date'=>$r['event_date'], 'round_order'=>(int)$r['round_order']];
+    }
+
+    usort($events, function($a, $b) {
+        $d = $a['date'] <=> $b['date'];
+        if ($d !== 0) return $d;
+        if ($a['application_id'] === $b['application_id']) return $a['round_order'] <=> $b['round_order'];
+        return $a['id'] <=> $b['id'];
+    });
+
+    $ordinals = ['screening' => [], 'round' => []];
+    foreach ($events as $i => $e) {
+        $ordinals[$e['type']][$e['id']] = $i + 1;
+    }
+    return $ordinals;
+}
+
 // ── Application — single ──────────────────────────────────────────────────────
 if ($action === 'application') {
     auth_required();
@@ -316,6 +362,14 @@ if ($action === 'application') {
             $rs = $pdo->prepare("SELECT * FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
             $rs->execute([$app['timeline_id']]);
             $rounds = $rs->fetchAll();
+
+            $ord = _interview_ordinals($pdo, $uid);
+            $timeline['screening_overall_number'] = $timeline['date_screening']
+                ? ($ord['screening'][$timeline['id']] ?? null) : null;
+            foreach ($rounds as &$r) {
+                $r['overall_number'] = $ord['round'][$r['id']] ?? null;
+            }
+            unset($r);
         }
     }
     ok(['application' => $app, 'timeline' => $timeline, 'rounds' => $rounds]);

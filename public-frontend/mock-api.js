@@ -1204,6 +1204,34 @@ function parseSalaryFloor(val) {
   return m ? parseInt(m[0]) : null;
 }
 
+// ── Helper: interview ordinal numbering (mirrors api.php's _interview_ordinals) ─
+// Assigns each screening + interview round a global position across the user's
+// entire history, ordered by date. Ties on the same date are broken by card
+// order within the same application (screening, then round_order), or by the
+// underlying row id across different applications.
+function _mockInterviewOrdinals(s) {
+  const events = [];
+  s.timelines.forEach(tl => {
+    if (tl.date_screening) {
+      events.push({ type:"screening", id:tl.id, application_id:tl.application_id, date:tl.date_screening, round_order:0 });
+    }
+  });
+  s.rounds.forEach(r => {
+    if (r.interview_date) {
+      const tl = s.timelines.find(t=>t.id===r.timeline_id);
+      if (tl) events.push({ type:"round", id:r.id, application_id:tl.application_id, date:r.interview_date, round_order:r.round_order });
+    }
+  });
+  events.sort((a,b) => {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    if (a.application_id === b.application_id) return a.round_order - b.round_order;
+    return a.id - b.id;
+  });
+  const ordinals = { screening:{}, round:{} };
+  events.forEach((e,i) => { ordinals[e.type][e.id] = i+1; });
+  return ordinals;
+}
+
 // ── Mock API — exposed as window.mockApi, called by api() in pipeline-core.php ─
 window.mockApi = async function(action, method="GET", body=null, params={}) {
   // Simulate network delay
@@ -1328,11 +1356,17 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
     if (!app) throw new Error("Not found");
     const tl = app.timeline_id ? s.timelines.find(t=>t.id===app.timeline_id) : null;
     const rounds = tl ? s.rounds.filter(r=>r.timeline_id===tl.id).sort((a,b)=>a.round_order-b.round_order) : [];
-    // Attach company/position/rating/date_applied to timeline (mirrors JOIN)
-    const tlFull = tl ? { ...tl, company: app.company, position: app.job_title,
-      rating: app.rating, date_applied: app.date_applied,
-      via_recruiting_firm: app.via_recruiting_firm, recruiting_firm: app.recruiting_firm } : null;
-    return { application: app, timeline: tlFull, rounds };
+    let tlFull = null, roundsFull = rounds;
+    if (tl) {
+      const ord = _mockInterviewOrdinals(s);
+      // Attach company/position/rating/date_applied to timeline (mirrors JOIN)
+      tlFull = { ...tl, company: app.company, position: app.job_title,
+        rating: app.rating, date_applied: app.date_applied,
+        via_recruiting_firm: app.via_recruiting_firm, recruiting_firm: app.recruiting_firm,
+        screening_overall_number: tl.date_screening ? (ord.screening[tl.id]||null) : null };
+      roundsFull = rounds.map(r=>({ ...r, overall_number: ord.round[r.id]||null }));
+    }
+    return { application: app, timeline: tlFull, rounds: roundsFull };
   }
 
   // ── Application — add ──────────────────────────────────────────────────────

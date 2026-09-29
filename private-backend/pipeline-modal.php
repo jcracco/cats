@@ -220,12 +220,12 @@ const STATUS_TO_TL = {
           { _type:"screening",
             date_recruiter:t.date_recruiter||"", recruiter_name:t.recruiter_name||"",
             date_screening:t.date_screening||"", screener_name:t.screener_name||"",
-            screening_type:t.screening_type||"" },
+            screening_type:t.screening_type||"", overall_number:t.screening_overall_number||null },
           ...(d.rounds||[]).map(r=>({
             _type:"round", id:r.id, round_order:r.round_order,
             interview_date:r.interview_date||"", interview_type:r.interview_type||"",
             interviewer:r.interviewer||"", notes:r.notes||"",
-            is_final_round:!!r.is_final_round,
+            is_final_round:!!r.is_final_round, overall_number:r.overall_number||null,
           }))
         ]);
       }
@@ -587,7 +587,10 @@ const STATUS_TO_TL = {
                   {/* ── Stages ───────────────────────────────────────────── */}
                   {stages.map((s,i)=>(
                     <div key={i} className="stage-row">
-                      <div className="stage-label">{s._type==="screening" ? "Screening" : `Round ${s.round_order}`}</div>
+                      <div className="stage-label" style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                        <span>{s._type==="screening" ? "Screening" : `Round ${s.round_order}`}</span>
+                        {s.overall_number && <span style={{ textTransform:"none",letterSpacing:0,fontWeight:400,color:"var(--text-dim)" }}>Interview #{s.overall_number}</span>}
+                      </div>
                       {s._type==="screening" ? (
                         <div>
                           <div className="form-row">
