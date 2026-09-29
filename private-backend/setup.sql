@@ -63,6 +63,8 @@ INSERT INTO sources (user_id, name) VALUES
     (NULL, 'Jobgether'),
     (NULL, 'BuiltIn'),
     (NULL, 'Hiring Café'),
+    (NULL, 'Glassdoor'),
+    (NULL, 'Monster'),
     (NULL, 'Other');
 
 
@@ -116,6 +118,8 @@ INSERT INTO applied_through_options (user_id, name) VALUES
     (NULL, 'Avature'),
     (NULL, 'Teamtailor'),
     (NULL, 'Breezy'),
+    (NULL, 'Glassdoor'),
+    (NULL, 'Monster'),
     (NULL, 'Other/Unknown');
 
 

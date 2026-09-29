@@ -441,9 +441,35 @@ if ($action === 'timeline_entry') {
     ok($entry);
 }
 
+// ── Ownership helpers — verify a timeline/round belongs to the current user ───
+function _owns_application(PDO $pdo, int $app_id, int $uid): bool {
+    $stmt = $pdo->prepare("SELECT id FROM applications WHERE id=? AND user_id=?");
+    $stmt->execute([$app_id, $uid]);
+    return (bool)$stmt->fetch();
+}
+function _owns_timeline(PDO $pdo, int $timeline_id, int $uid): bool {
+    $stmt = $pdo->prepare("
+        SELECT t.id FROM timeline_entries t
+        JOIN applications a ON t.application_id = a.id
+        WHERE t.id=? AND a.user_id=?");
+    $stmt->execute([$timeline_id, $uid]);
+    return (bool)$stmt->fetch();
+}
+function _owns_round(PDO $pdo, int $round_id, int $uid): bool {
+    $stmt = $pdo->prepare("
+        SELECT r.id FROM interview_rounds r
+        JOIN timeline_entries t ON r.timeline_id = t.id
+        JOIN applications a ON t.application_id = a.id
+        WHERE r.id=? AND a.user_id=?");
+    $stmt->execute([$round_id, $uid]);
+    return (bool)$stmt->fetch();
+}
+
 // ── Timeline — add ────────────────────────────────────────────────────────────
 if ($action === 'timeline_add') {
-    auth_required(); $b = body(); $pdo = db();
+    auth_required(); $b = body(); $pdo = db(); $uid = authed_uid();
+    $app_id = int_or_null($b, 'application_id');
+    if (!$app_id || !_owns_application($pdo, $app_id, $uid)) fail('Not found', 404);
     $stmt = $pdo->prepare("INSERT INTO timeline_entries
         (date_recruiter,recruiter_name,date_screening,screener_name,
          screening_type,pending,date_closed,offer_date,offer_notes,application_id)
@@ -452,14 +478,15 @@ if ($action === 'timeline_add') {
         date_or_null($b,'date_recruiter'), str_or_null($b,'recruiter_name'),
         date_or_null($b,'date_screening'), str_or_null($b,'screener_name'), str_or_null($b,'screening_type'),
         (int)($b['pending']??1), date_or_null($b,'date_closed'),
-        date_or_null($b,'offer_date'), str_or_null($b,'offer_notes'), int_or_null($b,'application_id'),
+        date_or_null($b,'offer_date'), str_or_null($b,'offer_notes'), $app_id,
     ]);
     ok(['id' => (int)$pdo->lastInsertId()]);
 }
 
 // ── Timeline — update ─────────────────────────────────────────────────────────
 if ($action === 'timeline_update') {
-    auth_required(); $id = (int)($_GET['id']??0); $b = body(); $pdo = db();
+    auth_required(); $id = (int)($_GET['id']??0); $b = body(); $pdo = db(); $uid = authed_uid();
+    if (!_owns_timeline($pdo, $id, $uid)) fail('Not found', 404);
     $stmt = $pdo->prepare("UPDATE timeline_entries SET
         date_recruiter=?,recruiter_name=?,date_screening=?,screener_name=?,
         screening_type=?,pending=?,date_closed=?,offer_date=?,offer_notes=?
@@ -475,7 +502,8 @@ if ($action === 'timeline_update') {
 
 // ── Timeline — delete ─────────────────────────────────────────────────────────
 if ($action === 'timeline_delete') {
-    auth_required(); $id = (int)($_GET['id']??0); $pdo = db();
+    auth_required(); $id = (int)($_GET['id']??0); $pdo = db(); $uid = authed_uid();
+    if (!_owns_timeline($pdo, $id, $uid)) fail('Not found', 404);
     $pdo->prepare("DELETE FROM interview_rounds WHERE timeline_id=?")->execute([$id]);
     $pdo->prepare("DELETE FROM timeline_entries WHERE id=?")->execute([$id]);
     $pdo->prepare("UPDATE applications SET timeline_id=NULL WHERE timeline_id=?")->execute([$id]);
@@ -484,8 +512,9 @@ if ($action === 'timeline_delete') {
 
 // ── Rounds — list ─────────────────────────────────────────────────────────────
 if ($action === 'rounds') {
-    auth_required();
+    auth_required(); $uid = authed_uid();
     $tid = (int)($_GET['timeline_id']??0); $pdo = db();
+    if (!_owns_timeline($pdo, $tid, $uid)) fail('Not found', 404);
     $stmt = $pdo->prepare("SELECT * FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
     $stmt->execute([$tid]); $rounds = $stmt->fetchAll();
     ok($rounds);
@@ -493,12 +522,14 @@ if ($action === 'rounds') {
 
 // ── Round — save (upsert) ─────────────────────────────────────────────────────
 if ($action === 'round_save') {
-    auth_required(); $b = body(); $pdo = db();
+    auth_required(); $b = body(); $pdo = db(); $uid = authed_uid();
+    $tid = (int)($b['timeline_id']??0);
+    if (!_owns_timeline($pdo, $tid, $uid)) fail('Not found', 404);
     $is_final = isset($b['is_final_round']) ? (int)(bool)$b['is_final_round'] : 0;
     // If marking as final, unset all other rounds in this timeline as final first
     if ($is_final) {
         $pdo->prepare("UPDATE interview_rounds SET is_final_round=0 WHERE timeline_id=?")
-            ->execute([(int)($b['timeline_id']??0)]);
+            ->execute([$tid]);
     }
     $stmt = $pdo->prepare("INSERT INTO interview_rounds
         (timeline_id,round_order,interview_date,interview_type,interviewer,notes,is_final_round)
@@ -507,7 +538,7 @@ if ($action === 'round_save') {
             interview_date=VALUES(interview_date),interview_type=VALUES(interview_type),
             interviewer=VALUES(interviewer),notes=VALUES(notes),is_final_round=VALUES(is_final_round)");
     $stmt->execute([
-        (int)($b['timeline_id']??0), (int)($b['round_order']??0),
+        $tid, (int)($b['round_order']??0),
         date_or_null($b,'interview_date'), str_or_null($b,'interview_type'),
         str_or_null($b,'interviewer'), str_or_null($b,'notes'),
         $is_final,
@@ -517,32 +548,10 @@ if ($action === 'round_save') {
 
 // ── Round — delete ────────────────────────────────────────────────────────────
 if ($action === 'round_delete') {
-    auth_required(); $id = (int)($_GET['id']??0); $pdo = db();
+    auth_required(); $id = (int)($_GET['id']??0); $pdo = db(); $uid = authed_uid();
+    if (!_owns_round($pdo, $id, $uid)) fail('Not found', 404);
     $pdo->prepare("DELETE FROM interview_rounds WHERE id=?")->execute([$id]);
     ok();
-}
-
-// ── One-time data migrations (admin only) ─────────────────────────────────────
-if ($action === 'run_migration') {
-    auth_required();
-    $pdo = db();
-    $results = [];
-
-    // 1. Move Workday job_link → dashboard_link where dashboard_link is empty
-    $stmt = $pdo->query("UPDATE applications
-        SET dashboard_link = job_link, job_link = NULL
-        WHERE applied_through = 'Workday'
-        AND (dashboard_link IS NULL OR dashboard_link = '')
-        AND job_link IS NOT NULL AND job_link != ''");
-    $results['workday_links_moved'] = $stmt->rowCount();
-
-    // 2. Consolidate LinkedIn → LinkedIn Easy Apply
-    $stmt = $pdo->query("UPDATE applications
-        SET applied_through = 'LinkedIn Easy Apply'
-        WHERE applied_through = 'LinkedIn'");
-    $results['linkedin_consolidated'] = $stmt->rowCount();
-
-    ok($results);
 }
 
 // ── Share — generate token ────────────────────────────────────────────────────
