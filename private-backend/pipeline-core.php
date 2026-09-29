@@ -200,7 +200,7 @@ function buildStats(sorted) {
   const withI      = sorted.filter(d=>d.rounds&&d.rounds.length>0).length;
   const ghost      = sorted.filter(d=>!d.rejected&&!d.pending).length;
   const r2nd       = sorted.filter(d=>d.rounds&&d.rounds.length>=2).length;
-  const totalIntvw = sorted.reduce((s,i)=>s+1+(i.rounds?i.rounds.length:0), 0);
+  const totalIntvw = sorted.reduce((s,i)=>s+(i.screening?1:0)+(i.rounds?i.rounds.length:0), 0);
   const avgR       = Math.round(sorted.reduce((s,i)=>s+(dBw(i.applied,i.recruiter)||0),0)/sorted.length);
   const avgS       = Math.round(sorted.reduce((s,i)=>s+(dBw(i.applied,i.screening)||0),0)/sorted.length);
   const maxR       = Math.max(...sorted.map(d=>d.rounds?d.rounds.length:0));
