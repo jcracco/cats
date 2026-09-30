@@ -257,6 +257,9 @@ if ($action === 'applications') {
     $outreach_filter = trim($_GET['outreach_filter'] ?? '');
     if ($outreach_filter === 'yes') { $where[] = "a.has_outreach = 1"; }
     elseif ($outreach_filter === 'no') { $where[] = "a.has_outreach = 0"; }
+    $referral_filter = trim($_GET['referral_filter'] ?? '');
+    if ($referral_filter === 'yes') { $where[] = "a.has_referral = 1"; }
+    elseif ($referral_filter === 'no') { $where[] = "a.has_referral = 0"; }
     $location_filter = trim($_GET['location_filter'] ?? '');
     if (in_array($location_filter, ['Remote', 'Hybrid', 'Onsite'], true)) {
         $where[] = "a.location_type = ?";
@@ -284,7 +287,7 @@ if ($action === 'applications') {
                     a.source, a.referrer_name, a.applied_through, a.resume_version, a.rating, a.status,
                     a.salary_requested, a.salary_listed, a.salary_type,
                     a.job_link, a.dashboard_link, a.job_id, a.timeline_id,
-                    a.cover_letter, a.has_outreach, a.outreach_notes"
+                    a.cover_letter, a.has_outreach, a.outreach_notes, a.has_referral"
          . ($is_auth ? ", a.contacts" : "")
          . " FROM applications a WHERE " . implode(' AND ', $where)
          . " ORDER BY $group_order, $sort_sql";
@@ -384,8 +387,8 @@ if ($action === 'application_add') {
          location_type,location_detail,days_onsite,source,referrer_name,applied_through,
          resume_version,rating,status,job_id,job_link,dashboard_link,
          salary_requested,salary_listed,salary_type,contacts,notes,job_description,
-         cover_letter,has_outreach,outreach_notes)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+         cover_letter,has_outreach,outreach_notes,has_referral)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         $uid,
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
@@ -397,7 +400,7 @@ if ($action === 'application_add') {
         str_or_null($b,'dashboard_link'), str_or_null($b,'salary_requested'), str_or_null($b,'salary_listed'),
         $b['salary_type']??'Yearly', str_or_null($b,'contacts'), str_or_null($b,'notes'),
         str_or_null($b,'job_description'), int_or_null($b,'cover_letter'), int_or_null($b,'has_outreach'),
-        str_or_null($b,'outreach_notes'),
+        str_or_null($b,'outreach_notes'), int_or_null($b,'has_referral'),
     ]);
     $new_id = (int)$pdo->lastInsertId();
     if (($b['status']??'') === 'Interviewing') _auto_create_timeline($pdo, $new_id, $b);
@@ -416,7 +419,7 @@ if ($action === 'application_update') {
         location_type=?,location_detail=?,days_onsite=?,source=?,referrer_name=?,applied_through=?,
         resume_version=?,rating=?,status=?,job_id=?,job_link=?,dashboard_link=?,
         salary_requested=?,salary_listed=?,salary_type=?,contacts=?,notes=?,job_description=?,
-        cover_letter=?,has_outreach=?,outreach_notes=?
+        cover_letter=?,has_outreach=?,outreach_notes=?,has_referral=?
         WHERE id=? AND user_id=?");
     $stmt->execute([
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
@@ -428,7 +431,7 @@ if ($action === 'application_update') {
         str_or_null($b,'dashboard_link'), str_or_null($b,'salary_requested'), str_or_null($b,'salary_listed'),
         $b['salary_type']??'Yearly', str_or_null($b,'contacts'), str_or_null($b,'notes'),
         str_or_null($b,'job_description'), int_or_null($b,'cover_letter'), int_or_null($b,'has_outreach'),
-        str_or_null($b,'outreach_notes'), $id, $uid,
+        str_or_null($b,'outreach_notes'), int_or_null($b,'has_referral'), $id, $uid,
     ]);
     if (($b['status']??'') === 'Interviewing' && !$current['timeline_id'])
         _auto_create_timeline($pdo, $id, $b);
@@ -637,7 +640,7 @@ if ($action === 'share') {
 
     $slim = !empty($_GET['slim']);
     $cols = $slim
-        ? "a.id,a.date_applied,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.location_detail,a.days_onsite,a.source,a.referrer_name,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.notes,a.timeline_id"
+        ? "a.id,a.date_applied,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.location_detail,a.days_onsite,a.source,a.referrer_name,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.has_referral,a.notes,a.timeline_id"
         : "a.*";
 
     $stmt = $pdo->prepare("

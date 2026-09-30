@@ -87,7 +87,7 @@ const SOURCE_COLORS = {
   "Company website":   { bg:"rgba(168,85,247,0.12)",  color:"#c084fc",  border:"rgba(168,85,247,0.3)"  },
   "LinkedIn":          { bg:"rgba(14,165,233,0.12)",  color:"#38bdf8",  border:"rgba(14,165,233,0.3)"  },
   "Recruiter Outreach":{ bg:"rgba(251,191,36,0.12)",  color:"#f59e0b",  border:"rgba(251,191,36,0.3)"  },
-  "Referral":          { bg:"rgba(52,211,153,0.12)",  color:"#34d399",  border:"rgba(52,211,153,0.3)"  },
+  "Personal Network":  { bg:"rgba(52,211,153,0.12)",  color:"#34d399",  border:"rgba(52,211,153,0.3)"  },
   "Dice":              { bg:"rgba(239,68,68,0.12)",   color:"#f87171",  border:"rgba(239,68,68,0.3)"   },
   "Recruiting Agency": { bg:"rgba(148,163,184,0.12)", color:"#94a3b8",  border:"rgba(148,163,184,0.3)" },
   "Indeed":            { bg:"rgba(99,102,241,0.13)",  color:"#818cf8",  border:"rgba(99,102,241,0.3)"  },
@@ -96,7 +96,7 @@ const SOURCE_COLORS = {
   "BuiltIn":           { bg:"rgba(139,92,246,0.12)",  color:"#a78bfa",  border:"rgba(139,92,246,0.3)"  },
   "Hiring Café":       { bg:"rgba(180,83,9,0.12)",    color:"#d97706",  border:"rgba(180,83,9,0.3)"    },
 };
-const SOURCES = ["BuiltIn","Company website","Cybercoders","Dice","Hiring Café","Indeed","Jobgether","LinkedIn","Recruiter Outreach","Recruiting Agency","Referral","Other"];
+const SOURCES = ["BuiltIn","Company website","Cybercoders","Dice","Hiring Café","Indeed","Jobgether","LinkedIn","Personal Network","Recruiter Outreach","Recruiting Agency","Other"];
 const APPLIED_THROUGH = ["LinkedIn Easy Apply","Indeed","Dice","Cybercoders","Workday","Email","Recruiting Firm Portal","Other/Unknown","ADP","ApplyToJob","Ashby","Avature","Bamboo","Breezy","Dayforce","Dover","Eightfold","Gem","Greenhouse","Hirebridge","Humi","JazzHR","Jobvite","Kronos","Kula","Lever","Oracle","Oracle Cloud","Paycom","Paycor","Paylocity","Pinpoint","Rippling","SAP SuccessFactors","SmartRecruiters","Taleo","Teamtailor","Trakstar","UltiPro","Workable","iCIMS"];
 const INTERVIEW_TYPES = ["Phone","Async","Home Assessment","Zoom","MS Teams","Google Meet","On Site"];
 
@@ -576,7 +576,7 @@ function SalarySlider({ salaryMin, setSalaryMin, salaryType, setSalaryType }) {
 }
 
 function ExtrasDropdown({ value, onChange }) {
-  // value = { coverLetter:[], outreach:[], location:[] }
+  // value = { coverLetter:[], outreach:[], referral:[], location:[] }
   // A section is "active" when exactly 1 of its 2 options is selected
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -588,6 +588,7 @@ function ExtrasDropdown({ value, onChange }) {
   const activeCount =
     (value.coverLetter.length === 1 ? 1 : 0) +
     (value.outreach.length    === 1 ? 1 : 0) +
+    (value.referral.length    === 1 ? 1 : 0) +
     (value.location.length    === 1 ? 1 : 0);
   const hasAny = activeCount > 0;
 
@@ -596,7 +597,7 @@ function ExtrasDropdown({ value, onChange }) {
     const next = cur.includes(v) ? cur.filter(x=>x!==v) : [...cur, v];
     onChange({ ...value, [key]: next });
   };
-  const clearAll = () => onChange({ coverLetter:[], outreach:[], location:[] });
+  const clearAll = () => onChange({ coverLetter:[], outreach:[], referral:[], location:[] });
 
   const Section = ({ label, fkey, opts }) => (
     <>
@@ -628,6 +629,8 @@ function ExtrasDropdown({ value, onChange }) {
           <Section label="COVER LETTER" fkey="coverLetter" opts={[{v:"yes",label:"Yes"},{v:"no",label:"No"}]} />
           <div style={{ height:1, background:"var(--border)", margin:"4px 0" }} />
           <Section label="OUTREACH" fkey="outreach" opts={[{v:"yes",label:"Yes"},{v:"no",label:"No"}]} />
+          <div style={{ height:1, background:"var(--border)", margin:"4px 0" }} />
+          <Section label="REFERRAL" fkey="referral" opts={[{v:"yes",label:"Yes"},{v:"no",label:"No"}]} />
           <div style={{ height:1, background:"var(--border)", margin:"4px 0" }} />
           <Section label="LOCATION" fkey="location" opts={[{v:"Remote",label:"Remote"},{v:"Hybrid",label:"Hybrid"},{v:"Onsite",label:"Onsite"}]} />
         </div>
@@ -736,16 +739,24 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
     if (firm) return firm;
     return "—";
   };
-  const displayFirmDot = a => a.via_recruiting_firm && a.recruiting_firm ? (
-    <span title={`Via: ${a.recruiting_firm}`} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:16, height:16, marginLeft:2, verticalAlign:"middle", cursor:"help", flexShrink:0 }}>
-      <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background:"#fbbf24", boxShadow:"0 0 4px #fbbf2480" }} />
-    </span>
-  ) : null;
-  const displayOutreachDot = a => a.has_outreach ? (
-    <span title={a.outreach_notes ? `Outreach: ${a.outreach_notes}` : "Outreach performed"} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:16, height:16, marginLeft:2, verticalAlign:"middle", cursor:"help", flexShrink:0 }}>
-      <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background:"#3b82f6", boxShadow:"0 0 4px #3b82f680" }} />
-    </span>
-  ) : null;
+  // ── Boosters — everything that helped this application beyond the base
+  // source/channel: recruiting firm, referral, outreach, cover letter.
+  const displayBoosters = a => {
+    const icons = [];
+    if (a.via_recruiting_firm && a.recruiting_firm) icons.push(
+      <span key="firm" title={`Via: ${a.recruiting_firm}`} style={{ color:"var(--text-muted)", cursor:"help" }}><Briefcase size={13} /></span>
+    );
+    if (a.has_referral) icons.push(
+      <span key="ref" title={a.referrer_name ? `Referred by: ${a.referrer_name}` : "Referral"} style={{ color:"var(--text-muted)", cursor:"help" }}><UserCheck size={13} /></span>
+    );
+    if (a.has_outreach) icons.push(
+      <span key="out" title={a.outreach_notes ? `Outreach: ${a.outreach_notes}` : "Outreach performed"} style={{ color:"var(--text-muted)", cursor:"help" }}><Send size={13} /></span>
+    );
+    if (a.cover_letter) icons.push(
+      <span key="cl" title="Cover letter added" style={{ color:"var(--text-muted)", cursor:"help" }}><FileText size={13} /></span>
+    );
+    return icons.length ? <span style={{ display:"inline-flex", gap:6, alignItems:"center" }}>{icons}</span> : "—";
+  };
   const displaySalary  = a => {
     const val = a.salary_listed || "";
     if (!val) return a.salary_requested ? `(req: ${a.salary_requested}${a.salary_type==="Hourly"?" /h":""})` : "";
@@ -774,6 +785,7 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
             <th>Status</th>
             <th>Source</th>
             <th>Via</th>
+            <th>Boosters</th>
             <th>Resume</th>
             <th>Rating</th>
             <th>Location</th>
@@ -784,7 +796,7 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
           {rows.map((r,i) => {
             if (r.type === "header") return (
               <tr key={`g-${r.g}`} className="group-header" onClick={()=>toggleGroup(r.g)} style={{ cursor:"pointer" }}>
-                <td colSpan={10}>
+                <td colSpan={11}>
                   <span style={{ display:"inline-block", width:8, height:8, borderRadius:"50%", background:GROUP_COLORS[r.g], boxShadow:`0 0 5px ${GROUP_COLORS[r.g]}80`, marginRight:8, verticalAlign:"middle" }} />
                   {GROUP_LABELS[r.g]}
                   <span style={{ marginLeft:8, fontSize:10, color:"var(--text-dim)" }}>({r.count})</span>
@@ -796,16 +808,16 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
             return (
               <tr key={a.id} onClick={()=>onRowClick&&onRowClick(a)} onContextMenu={e=>{e.preventDefault();setCtxMenu({appId:a.id,status:a.status,x:e.clientX,y:e.clientY});}}>
                 <td className="col-date">{a.date_applied}</td>
-                <td className="col-company" title={displayCompany(a)}>{displayCompany(a)}{displayFirmDot(a)}</td>
+                <td className="col-company" title={displayCompany(a)}>{displayCompany(a)}</td>
                 <td className="col-title"  title={a.job_title}>{a.job_title}</td>
                 <td><StatusBadge status={a.status} /></td>
                 <td>{a.source ? (() => {
-                  const sc  = SOURCE_COLORS[a.source];
-                  const tip = a.source === "Referral" && a.referrer_name ? `Referred by: ${a.referrer_name}` : undefined;
-                  return <span className="source-pill" title={tip} style={{ ...(sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}), cursor:tip?"help":undefined }}>{a.source}</span>;
+                  const sc = SOURCE_COLORS[a.source];
+                  return <span className="source-pill" style={sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}}>{a.source}</span>;
                 })() : "—"}</td>
-                <td>{a.applied_through || "—"}{displayOutreachDot(a)}</td>
-                <td>{a.resume_version || "—"}{a.cover_letter ? <span title="Cover letter added" style={{marginLeft:4,color:"var(--text-muted)",cursor:"help"}}><FileText size={13} /></span> : null}</td>
+                <td>{a.applied_through || "—"}</td>
+                <td>{displayBoosters(a)}</td>
+                <td>{a.resume_version || "—"}</td>
                 <td className="col-rating"><span className={a.rating>=65&&a.rating<80?"rating-badge-mid":""} style={{ display:"inline-block", fontSize:10, fontWeight:700, color:rc(a.rating), background:rb(a.rating), padding:"1px 5px", borderRadius:3 }}>{a.rating ?? "—"}</span></td>
                 <td>{displayLoc(a)}</td>
                 <td className="col-salary" title={salaryTooltip(a)}>{displaySalary(a) || "—"}</td>
@@ -867,7 +879,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
   const [salaryType, setSalaryType]   = useState('Yearly');
   const [allAppliedThrough, setAllAT] = useState([]);
   const [allResumeVersions, setAllRV] = useState([]);
-  const [extrasFilter, setExtrasF]    = useState({ coverLetter:[], outreach:[], location:[] });
+  const [extrasFilter, setExtrasF]    = useState({ coverLetter:[], outreach:[], referral:[], location:[] });
   const [showFilters, setShowFilters] = useState(false);
 
   const activeFilterCount =
@@ -880,12 +892,13 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
     ((dateFrom || dateTo) ? 1 : 0) +
     (extrasFilter.coverLetter.length === 1 ? 1 : 0) +
     (extrasFilter.outreach.length    === 1 ? 1 : 0) +
+    (extrasFilter.referral.length    === 1 ? 1 : 0) +
     (extrasFilter.location.length    === 1 ? 1 : 0);
 
   const onResetAll = () => {
     setStatusF([]); setResumeF([]); setSourceF([]); setAppliedF([]);
     setRatingMin(0); setSalaryMin(0); setDateFrom(null); setDateTo(null);
-    setExtrasF({ coverLetter:[], outreach:[], location:[] });
+    setExtrasF({ coverLetter:[], outreach:[], referral:[], location:[] });
   };
 
   useEffect(() => {
@@ -908,6 +921,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
     if (salaryMin > 0) { params.salary_min = salaryMin; params.salary_type_filter = salaryType; }
     if (extrasFilter.coverLetter.length === 1) params.cover_letter_filter = extrasFilter.coverLetter[0];
     if (extrasFilter.outreach.length    === 1) params.outreach_filter     = extrasFilter.outreach[0];
+    if (extrasFilter.referral.length    === 1) params.referral_filter     = extrasFilter.referral[0];
     if (extrasFilter.location.length    === 1) params.location_filter     = extrasFilter.location[0];
     api("applications", "GET", null, params).then(setApps).catch(console.error);
   }, [search, statusFilter, resumeFilter, appliedFilter, ratingMin, dateFrom, dateTo, sourceFilter, salaryMin, salaryType, sort, extrasFilter, refreshKey]);

@@ -141,7 +141,7 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
     status:"Applied", job_id:"", job_link:"", dashboard_link:"",
     salary_requested:"", salary_listed:"", salary_type:"Yearly",
     contacts:"", notes:"", job_description:"",
-    cover_letter:false, has_outreach:false, outreach_notes:"",
+    cover_letter:false, has_outreach:false, outreach_notes:"", has_referral:false,
   });
   const [form, setForm] = useState(emptyForm());
   const sf = (k,v) => setForm(f=>({...f,[k]:v}));
@@ -206,6 +206,7 @@ const STATUS_TO_TL = {
         salary_type:a.salary_type||"Yearly", contacts:a.contacts||"",
         notes:a.notes||"", job_description:a.job_description||"",
         cover_letter:!!a.cover_letter, has_outreach:!!a.has_outreach, outreach_notes:a.outreach_notes||"",
+        has_referral:!!a.has_referral,
       });
       if (d.timeline) {
         const t = d.timeline;
@@ -253,7 +254,7 @@ const STATUS_TO_TL = {
     setFormError("");
     setSaving(true);
     try {
-      const body = {...form, via_recruiting_firm:form.via_recruiting_firm?1:0, cover_letter:form.cover_letter?1:0, has_outreach:form.has_outreach?1:0};
+      const body = {...form, via_recruiting_firm:form.via_recruiting_firm?1:0, cover_letter:form.cover_letter?1:0, has_outreach:form.has_outreach?1:0, has_referral:form.has_referral?1:0};
       if (isNew) {
         const res = await api("application_add","POST",body);
         onSaved&&onSaved(res.id);
@@ -419,7 +420,7 @@ const STATUS_TO_TL = {
               <div className="form-row">
                 <FormField label="Source">
                   {editing||isNew ? (
-                    <LookupDropdown type="sources" value={form.source} onChange={v=>{ sf("source",v); if(v!=="Referral") sf("referrer_name",""); }} />
+                    <LookupDropdown type="sources" value={form.source} onChange={v=>sf("source",v)} />
                   ) : form.source ? (() => {
                       const sc = SOURCE_COLORS[form.source];
                       return <span className="source-pill" style={sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}}>{form.source}</span>;
@@ -431,14 +432,6 @@ const STATUS_TO_TL = {
                     : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{form.applied_through||"—"}</span>}
                 </FormField>
               </div>
-              {(editing||isNew) && form.source==="Referral" && (
-                <FormField label="Referrer Name">
-                  <input className="form-input" value={form.referrer_name} onChange={e=>sf("referrer_name",e.target.value)} placeholder="Who referred you?" />
-                </FormField>
-              )}
-              {!editing && !isNew && form.referrer_name && (
-                <div style={{ fontSize:12,color:"var(--text-secondary)",marginBottom:12 }}>Referred by: {form.referrer_name}</div>
-              )}
 
               <FormField label="Location">
                 {editing||isNew ? (
@@ -486,7 +479,7 @@ const STATUS_TO_TL = {
                 </div>
               </div>
 
-              {/* Cover letter & Outreach */}
+              {/* Application boosters — cover letter, outreach, referral */}
               {(editing||isNew) && (
                 <div style={{ marginBottom:12 }}>
                   <label className="form-checkbox-label">
@@ -500,12 +493,20 @@ const STATUS_TO_TL = {
                   {form.has_outreach && (
                     <input className="form-input" style={{ marginTop:6 }} value={form.outreach_notes} onChange={e=>sf("outreach_notes",e.target.value)} placeholder="Name(s) and channel — e.g. Jane Smith via LinkedIn" />
                   )}
+                  <label className="form-checkbox-label" style={{ marginTop:6 }}>
+                    <input type="checkbox" checked={form.has_referral} onChange={e=>{ sf("has_referral",e.target.checked); if(!e.target.checked) sf("referrer_name",""); }} />
+                    Referred by someone
+                  </label>
+                  {form.has_referral && (
+                    <input className="form-input" style={{ marginTop:6 }} value={form.referrer_name} onChange={e=>sf("referrer_name",e.target.value)} placeholder="Who referred you?" />
+                  )}
                 </div>
               )}
-              {!editing && !isNew && (form.cover_letter || form.has_outreach) && (
+              {!editing && !isNew && (form.cover_letter || form.has_outreach || form.has_referral) && (
                 <div style={{ marginBottom:12,fontSize:12,color:"var(--text-secondary)" }}>
                   {form.cover_letter && <div>✓ Cover letter included</div>}
                   {form.has_outreach && <div>✓ Outreach{form.outreach_notes ? ` — ${form.outreach_notes}` : ""}</div>}
+                  {form.has_referral && <div>✓ Referred{form.referrer_name ? ` — ${form.referrer_name}` : ""}</div>}
                 </div>
               )}
 
@@ -791,6 +792,8 @@ function ExportModal({ onClose }) {
     { key:'cover_letter',        label:'Cover Letter' },
     { key:'has_outreach',        label:'Outreach' },
     { key:'outreach_notes',      label:'Outreach Notes' },
+    { key:'has_referral',        label:'Referral' },
+    { key:'referrer_name',       label:'Referrer Name' },
     { key:'contacts',            label:'Contacts' },
     { key:'notes',               label:'Notes' },
     { key:'job_description',     label:'Job Description' },
@@ -849,6 +852,7 @@ function ExportModal({ onClose }) {
             case 'via_recruiting_firm': row.push(a.via_recruiting_firm?'Yes':'No'); break;
             case 'cover_letter':        row.push(a.cover_letter?'Yes':'No'); break;
             case 'has_outreach':        row.push(a.has_outreach?'Yes':'No'); break;
+            case 'has_referral':        row.push(a.has_referral?'Yes':'No'); break;
             case 'location':            row.push(loc); break;
             default:                    row.push(a[f.key]??'');
           }

@@ -55,7 +55,7 @@ INSERT INTO sources (user_id, name) VALUES
     (NULL, 'Company website'),
     (NULL, 'LinkedIn'),
     (NULL, 'Recruiter Outreach'),
-    (NULL, 'Referral'),
+    (NULL, 'Personal Network'),
     (NULL, 'Dice'),
     (NULL, 'Recruiting Agency'),
     (NULL, 'Indeed'),
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS applications (
 
     -- Application channel
     source              VARCHAR(100)                DEFAULT NULL,
-    referrer_name        VARCHAR(255)                DEFAULT NULL,  -- v3: optional, shown when source = Referral
+    referrer_name        VARCHAR(255)                DEFAULT NULL,  -- optional, shown when has_referral = 1
     applied_through     VARCHAR(100)                DEFAULT NULL,
 
     -- Resume (v3: VARCHAR instead of ENUM, values managed per-user via resume_versions)
@@ -174,10 +174,11 @@ CREATE TABLE IF NOT EXISTS applications (
     salary_listed       VARCHAR(50)                 DEFAULT NULL,
     salary_type         ENUM('Yearly','Hourly')     NOT NULL DEFAULT 'Yearly',
 
-    -- Application extras (v2)
+    -- Application extras (v2) / boosters
     cover_letter        TINYINT                     NOT NULL DEFAULT 0,
     has_outreach        TINYINT                     NOT NULL DEFAULT 0,
     outreach_notes      VARCHAR(500)                DEFAULT NULL,
+    has_referral        TINYINT                     NOT NULL DEFAULT 0,
 
     -- People & notes
     contacts            VARCHAR(500)                DEFAULT NULL,

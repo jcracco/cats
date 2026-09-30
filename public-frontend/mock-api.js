@@ -104,7 +104,7 @@ const SEED_APPS = [
     "location_type": "Remote",
     "location_detail": null,
     "days_onsite": null,
-    "source": "Referral",
+    "source": "Personal Network",
     "referrer_name": "Alex Torres",
     "applied_through": "Email",
     "resume_version": "SPO",
@@ -120,6 +120,7 @@ const SEED_APPS = [
     "cover_letter": 1,
     "has_outreach": 1,
     "outreach_notes": "Rachel Moore via LinkedIn",
+    "has_referral": 1,
     "notes": "Offer received \u2014 evaluating",
     "job_description": null,
     "timeline_id": 4
@@ -308,7 +309,7 @@ const SEED_APPS = [
     "location_type": "Remote",
     "location_detail": null,
     "days_onsite": null,
-    "source": "Referral",
+    "source": "Personal Network",
     "referrer_name": "Marcus Webb",
     "applied_through": "Lever",
     "resume_version": "TPM",
@@ -744,7 +745,7 @@ const SEED_APPS = [
     "location_type": "Remote",
     "location_detail": null,
     "days_onsite": null,
-    "source": "Referral",
+    "source": "Personal Network",
     "applied_through": "Lever",
     "resume_version": "SPO",
     "rating": 72,
@@ -759,6 +760,7 @@ const SEED_APPS = [
     "cover_letter": 0,
     "has_outreach": 0,
     "outreach_notes": null,
+    "has_referral": 1,
     "notes": null,
     "job_description": null,
     "timeline_id": null
@@ -1126,8 +1128,8 @@ const SEED_OPTIONS = {
   sources: [
     "AngelList",           // demo user entry
     "BuiltIn", "Company website", "Cybercoders", "Dice", "Hiring Café",
-    "Indeed", "Jobgether", "LinkedIn", "Other", "Recruiter Outreach",
-    "Recruiting Agency", "Referral",
+    "Indeed", "Jobgether", "LinkedIn", "Other", "Personal Network", "Recruiter Outreach",
+    "Recruiting Agency",
     "Wellfound",           // demo user entry
   ],
   applied_through_options: [
