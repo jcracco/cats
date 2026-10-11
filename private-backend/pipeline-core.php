@@ -100,6 +100,15 @@ const SOURCES = ["BuiltIn","Company website","Cybercoders","Dice","Hiring Café"
 const APPLIED_THROUGH = ["LinkedIn Easy Apply","Indeed","Dice","Cybercoders","Workday","Email","Recruiting Firm Portal","Other/Unknown","ADP","ApplyToJob","Ashby","Avature","Bamboo","Breezy","Dayforce","Dover","Eightfold","Gem","Greenhouse","Hirebridge","Humi","JazzHR","Jobvite","Kronos","Kula","Lever","Oracle","Oracle Cloud","Paycom","Paycor","Paylocity","Pinpoint","Rippling","SAP SuccessFactors","SmartRecruiters","Taleo","Teamtailor","Trakstar","UltiPro","Workable","iCIMS"];
 const INTERVIEW_TYPES = ["Phone","Async","Home Assessment","Zoom","MS Teams","Google Meet","On Site"];
 
+// Pipeline stage filter — cumulative milestones. Round 1 is treated as the Hiring Manager round
+// (same convention as the timeline stats). Filtering logic lives in api.php and mock-api.js.
+const STAGE_FILTERS = [
+  { value:"contact", label:"Made Contact",        hint:"Recruiter, screening or any interview" },
+  { value:"hm",      label:"Reached HM",          hint:"At least one interview round" },
+  { value:"past_hm", label:"Passed HM",           hint:"2+ rounds, or an offer after the HM round" },
+  { value:"final",   label:"Reached Final Round", hint:"A round marked as final" },
+];
+
 // ── Shared: StatusBadge ───────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG["Applied"];
@@ -639,11 +648,50 @@ function ExtrasDropdown({ value, onChange }) {
   );
 }
 
+// Single-select "furthest stage reached" filter (value = STAGE_FILTERS key or null)
+function StageDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(()=>{
+    const h = e => { if(ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h); return()=>document.removeEventListener("mousedown", h);
+  },[]);
+  const current = STAGE_FILTERS.find(s => s.value === value);
+  return (
+    <div ref={ref} style={{ position:"relative" }}>
+      <button onClick={()=>setOpen(o=>!o)} className={`pill ${current?"active":""}`} style={{ display:"flex", alignItems:"center", gap:5 }}>
+        {current ? `Stage: ${current.label}` : "Stage"}
+        <span style={{ fontSize:9, opacity:0.7, marginLeft:4 }}>{open?"▲":"▼"}</span>
+      </button>
+      {open && (
+        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:240, boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
+          {current
+            ? <button onClick={()=>{ onChange(null); setOpen(false); }} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>CLEAR</button>
+            : <div style={{ borderBottom:"1px solid var(--border)", color:"var(--text-dim)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", letterSpacing:1 }}>SHOWING ALL</div>
+          }
+          {STAGE_FILTERS.map(o=>(
+            <label key={o.value} style={{ display:"flex", alignItems:"flex-start", gap:8, padding:"7px 12px", cursor:"pointer", fontSize:12, color:value===o.value?"var(--text-primary)":"var(--text-secondary)" }}
+              onMouseEnter={e=>e.currentTarget.style.background="var(--table-row-hover)"}
+              onMouseLeave={e=>e.currentTarget.style.background="none"}>
+              <input type="radio" checked={value===o.value} onChange={()=>{ onChange(o.value); setOpen(false); }} style={{ cursor:"pointer", marginTop:2, accentColor:"#3b82f6" }} />
+              <span>
+                {o.label}
+                <span style={{ display:"block", fontSize:10, color:"var(--text-muted)", marginTop:1 }}>{o.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Filter bar (second row, shown when Filters is toggled) ────────────────────
-function FilterBar({ statusFilter, setStatusFilter, resumeFilter, setResumeFilter, sourceFilter, setSourceFilter, appliedFilter, setAppliedFilter, allResumeVersions, allSources, allAppliedThrough, ratingMin, setRatingMin, salaryMin, setSalaryMin, salaryType, setSalaryType, dateFrom, setDateFrom, dateTo, setDateTo, extrasFilter, setExtrasFilter, onResetAll }) {
+function FilterBar({ statusFilter, setStatusFilter, stageFilter, setStageFilter, resumeFilter, setResumeFilter, sourceFilter, setSourceFilter, appliedFilter, setAppliedFilter, allResumeVersions, allSources, allAppliedThrough, ratingMin, setRatingMin, salaryMin, setSalaryMin, salaryType, setSalaryType, dateFrom, setDateFrom, dateTo, setDateTo, extrasFilter, setExtrasFilter, onResetAll }) {
   return (
     <div className="filters" style={{ marginTop:-8, marginBottom:16, animation:"dropdownIn 0.14s ease" }}>
       <StatusDropdown value={statusFilter} onChange={setStatusFilter} />
+      <StageDropdown value={stageFilter} onChange={setStageFilter} />
       <MultiDropdown label="Resume" options={allResumeVersions} value={resumeFilter} onChange={setResumeFilter} />
       <MultiDropdown label="Source" options={allSources} value={sourceFilter} onChange={setSourceFilter} />
       <MultiDropdown label="Applied Via" options={allAppliedThrough} value={appliedFilter} onChange={setAppliedFilter} />
@@ -866,6 +914,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
   const [stats, setStats]             = useState(null);
   const [search, setSearch]           = useState("");
   const [statusFilter, setStatusF]    = useState([]);
+  const [stageFilter, setStageF]      = useState(null);
   const [resumeFilter, setResumeF]    = useState([]);
   const [sort, setSort]               = useState("date_desc");
   const [appliedFilter, setAppliedF]  = useState([]);
@@ -884,6 +933,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
 
   const activeFilterCount =
     (statusFilter.length > 0 ? 1 : 0) +
+    (stageFilter ? 1 : 0) +
     (resumeFilter.length > 0 ? 1 : 0) +
     (sourceFilter.length > 0 ? 1 : 0) +
     (appliedFilter.length > 0 ? 1 : 0) +
@@ -896,7 +946,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
     (extrasFilter.location.length    === 1 ? 1 : 0);
 
   const onResetAll = () => {
-    setStatusF([]); setResumeF([]); setSourceF([]); setAppliedF([]);
+    setStatusF([]); setStageF(null); setResumeF([]); setSourceF([]); setAppliedF([]);
     setRatingMin(0); setSalaryMin(0); setDateFrom(null); setDateTo(null);
     setExtrasF({ coverLetter:[], outreach:[], referral:[], location:[] });
   };
@@ -912,6 +962,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
     const params = { sort };
     if (search)              params.search = search;
     if (statusFilter.length) params.status = statusFilter.join(",");
+    if (stageFilter)         params.stage_filter = stageFilter;
     if (resumeFilter.length) params.resume = resumeFilter.join(",");
     if (appliedFilter.length) params.applied = appliedFilter.join(",");
     if (ratingMin > 0) params.rating_min = ratingMin;
@@ -924,7 +975,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
     if (extrasFilter.referral.length    === 1) params.referral_filter     = extrasFilter.referral[0];
     if (extrasFilter.location.length    === 1) params.location_filter     = extrasFilter.location[0];
     api("applications", "GET", null, params).then(setApps).catch(console.error);
-  }, [search, statusFilter, resumeFilter, appliedFilter, ratingMin, dateFrom, dateTo, sourceFilter, salaryMin, salaryType, sort, extrasFilter, refreshKey]);
+  }, [search, statusFilter, stageFilter, resumeFilter, appliedFilter, ratingMin, dateFrom, dateTo, sourceFilter, salaryMin, salaryType, sort, extrasFilter, refreshKey]);
 
   return (
     <div>
@@ -941,6 +992,7 @@ function ApplicationsTab({ isAuth, onOpenApp, refreshKey, onStatusChange }) {
       {showFilters && (
         <FilterBar
           statusFilter={statusFilter} setStatusFilter={setStatusF}
+          stageFilter={stageFilter} setStageFilter={setStageF}
           resumeFilter={resumeFilter} setResumeFilter={setResumeF}
           sourceFilter={sourceFilter} setSourceFilter={setSourceF}
           appliedFilter={appliedFilter} setAppliedFilter={setAppliedF}

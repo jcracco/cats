@@ -1304,6 +1304,22 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
       const statuses = params.status.split(",");
       apps = apps.filter(a=>statuses.includes(a.status));
     }
+    // Stage reached — round 1 is the Hiring Manager round (mirrors api.php)
+    if (params.stage_filter) {
+      const stage = params.stage_filter;
+      apps = apps.filter(a=>{
+        const tl = s.timelines.find(t=>t.id===a.timeline_id);
+        const rnds = tl ? s.rounds.filter(r=>r.timeline_id===tl.id) : [];
+        const nDated = rnds.filter(r=>r.interview_date).length;
+        const offered = !!tl?.offer_date || ["Offer","Accepted"].includes(a.status);
+        if (stage === "contact") return !!(tl?.date_recruiter || tl?.date_screening || tl?.offer_date || nDated >= 1 ||
+          ["Interviewing","Offer","Accepted","Rejected","Ghosted"].includes(a.status));
+        if (stage === "hm")      return nDated >= 1;
+        if (stage === "past_hm") return nDated >= 2 || (nDated >= 1 && offered);
+        if (stage === "final")   return rnds.some(r=>r.is_final_round);
+        return true;
+      });
+    }
     // Resume filter
     if (params.resume) {
       const versions = params.resume.split(",");

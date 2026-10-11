@@ -209,6 +209,25 @@ if ($action === 'applications') {
             $params   = array_merge($params, $statuses);
         }
     }
+    // Stage reached — round 1 is the Hiring Manager round (same convention as timeline stats)
+    $stage_filter = trim($_GET['stage_filter'] ?? '');
+    $dated_rounds = "(SELECT COUNT(*) FROM interview_rounds r JOIN timeline_entries t ON r.timeline_id = t.id
+                      WHERE t.application_id = a.id AND r.interview_date IS NOT NULL)";
+    $has_offer    = "(a.status IN ('Offer','Accepted') OR EXISTS (SELECT 1 FROM timeline_entries t
+                      WHERE t.application_id = a.id AND t.offer_date IS NOT NULL))";
+    if ($stage_filter === 'contact') {
+        $where[] = "(a.status IN ('Interviewing','Offer','Accepted','Rejected','Ghosted')
+                    OR EXISTS (SELECT 1 FROM timeline_entries t WHERE t.application_id = a.id
+                               AND (t.date_recruiter IS NOT NULL OR t.date_screening IS NOT NULL OR t.offer_date IS NOT NULL))
+                    OR $dated_rounds >= 1)";
+    } elseif ($stage_filter === 'hm') {
+        $where[] = "$dated_rounds >= 1";
+    } elseif ($stage_filter === 'past_hm') {
+        $where[] = "($dated_rounds >= 2 OR ($dated_rounds >= 1 AND $has_offer))";
+    } elseif ($stage_filter === 'final') {
+        $where[] = "EXISTS (SELECT 1 FROM interview_rounds r JOIN timeline_entries t ON r.timeline_id = t.id
+                            WHERE t.application_id = a.id AND r.is_final_round = 1)";
+    }
     $applied_via = trim($_GET['applied'] ?? '');
     if ($applied_via !== '') {
         $avs = array_filter(array_map('trim', explode(',', $applied_via)));
