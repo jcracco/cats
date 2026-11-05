@@ -1234,6 +1234,13 @@ function _mockInterviewOrdinals(s) {
   return ordinals;
 }
 
+// Mirrors app_date_closed() in api.php
+const MOCK_CLOSED_STATUSES = ["Rejected","Not Selected","No Answer","Withdrawn","Accepted"];
+function _mockAppDateClosed(body) {
+  if (!MOCK_CLOSED_STATUSES.includes(body.status || "Applied")) return null;
+  return body.date_closed || localToday();
+}
+
 // ── Mock API — exposed as window.mockApi, called by api() in pipeline-core.php ─
 window.mockApi = async function(action, method="GET", body=null, params={}) {
   // Simulate network delay
@@ -1370,9 +1377,12 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
 
   // ── Application — single ───────────────────────────────────────────────────
   if (action === "application") {
-    const app = s.apps.find(a=>a.id===parseInt(params.id));
-    if (!app) throw new Error("Not found");
-    const tl = app.timeline_id ? s.timelines.find(t=>t.id===app.timeline_id) : null;
+    const found = s.apps.find(a=>a.id===parseInt(params.id));
+    if (!found) throw new Error("Not found");
+    const tl = found.timeline_id ? s.timelines.find(t=>t.id===found.timeline_id) : null;
+    // Seed data predates applications.date_closed — fall back like the migration backfill
+    const app = (!found.date_closed && MOCK_CLOSED_STATUSES.includes(found.status))
+      ? { ...found, date_closed: tl?.date_closed || (found.updated_at||"").slice(0,10) || null } : found;
     const rounds = tl ? s.rounds.filter(r=>r.timeline_id===tl.id).sort((a,b)=>a.round_order-b.round_order) : [];
     let tlFull = null, roundsFull = rounds;
     if (tl) {
@@ -1390,7 +1400,7 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
   // ── Application — add ──────────────────────────────────────────────────────
   if (action === "application_add") {
     if (!s.auth) throw new Error("Not authenticated");
-    const newApp = { ...body, id: s.nextAppId++, user_id: 1, via_recruiting_firm: body.via_recruiting_firm?1:0,
+    const newApp = { ...body, date_closed: _mockAppDateClosed(body), id: s.nextAppId++, user_id: 1, via_recruiting_firm: body.via_recruiting_firm?1:0,
       status: body.status || "Applied", timeline_id: null,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
     s.apps.push(newApp);
@@ -1405,7 +1415,7 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
     const idx = s.apps.findIndex(a=>a.id===parseInt(params.id));
     if (idx < 0) throw new Error("Not found");
     const prev = s.apps[idx];
-    s.apps[idx] = { ...prev, ...body, id: prev.id, via_recruiting_firm: body.via_recruiting_firm?1:0 };
+    s.apps[idx] = { ...prev, ...body, date_closed: _mockAppDateClosed(body), id: prev.id, via_recruiting_firm: body.via_recruiting_firm?1:0 };
     if (body.status === "Interviewing" && !prev.timeline_id) _mockAutoCreateTimeline(s, prev.id);
     // Save timeline updates if provided
     if (prev.timeline_id && body.date_recruiter !== undefined) {
@@ -1442,6 +1452,7 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
     if (!app) throw new Error("Not found");
     app.status = body.status;
     const today = body.today || localToday();
+    app.date_closed = MOCK_CLOSED_STATUSES.includes(body.status) ? today : null;
     if (app.timeline_id) {
       const tl = s.timelines.find(t=>t.id===app.timeline_id);
       if (tl) {
@@ -1497,6 +1508,9 @@ window.mockApi = async function(action, method="GET", body=null, params={}) {
       screening_type: body.screening_type||null, pending: body.pending??1,
       date_closed: body.date_closed||null,
       offer_date: body.offer_date||null, offer_notes: body.offer_notes||null });
+    // Keep the application's closed date in sync with the timeline's
+    const linked = s.apps.find(a=>a.timeline_id===s.timelines[ti].id);
+    if (linked) linked.date_closed = body.date_closed||null;
     saveState(s);
     return null;
   }

@@ -229,6 +229,8 @@ function App() {
   const [showShare,  setShowShare]  = useState(false);
 
   const openApp  = (a) => setAppModal({id: a?.id ?? null});
+  // Copy: replace the open modal with a new, prefilled Add Application modal
+  const copyApp  = (prefill, from) => setAppModal({id: null, prefill, copiedFrom: from});
   const openTl   = (e) => {
     // If timeline entry has a linked application, open AppModal on interview tab
     if (e?.application_id) { setAppModal({id: e.application_id, defaultTab:"interview"}); }
@@ -382,7 +384,7 @@ function App() {
       </>)}
       {/* Modals */}
       {showLogin   && <LoginModal onSuccess={handleLogin} onClose={()=>setShowLogin(false)} hint={demoHint} />}
-      {appModal    && <AppModal appId={appModal.id} isAuth={isAuth} onClose={()=>setAppModal(null)} onSaved={onAppSaved} onDeleted={onAppDeleted} defaultTab={appModal.defaultTab||"info"} />}
+      {appModal    && <AppModal key={appModal.prefill ? "copy" : (appModal.id ?? "new")} appId={appModal.id} isAuth={isAuth} onClose={()=>setAppModal(null)} onSaved={onAppSaved} onDeleted={onAppDeleted} onCopy={copyApp} initialForm={appModal.prefill||null} copiedFrom={appModal.copiedFrom||null} defaultTab={appModal.defaultTab||"info"} />}
       {tlModal     && <TimelineModal entryId={tlModal.id} isNew={tlModal.isNew} onClose={()=>setTlModal(null)} onSaved={onTlSaved} onDeleted={onTlDeleted} />}
       {showExport  && <ExportModal onClose={()=>setShowExport(false)} />}
       {showShare   && <ShareModal initialToken={myShareToken} onClose={()=>setShowShare(false)} onTokenChange={setMyShareToken} />}

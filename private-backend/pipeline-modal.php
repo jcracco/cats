@@ -122,7 +122,10 @@ function LookupDropdown({ type, value, onChange, placeholder="Select…" }) {
 
 // ── AppModal ──────────────────────────────────────────────────────────────────
 // defaultTab: "info" | "interview"
-function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info" }) {
+// initialForm: optional prefill for a new application (used by Copy)
+// copiedFrom:  label of the source application, shown in the header when copying
+// onCopy(prefill, label): parent opens a new prefilled AppModal
+function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, onCopy, initialForm=null, copiedFrom=null, defaultTab="info" }) {
   const isNew = appId === null;
   const [tab, setTab]         = useState(defaultTab);
   const [editing, setEditing] = useState(isNew);
@@ -134,7 +137,7 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
   const [formError, setFormError] = useState("");
 
   const emptyForm = () => ({
-    date_applied: localToday(),
+    date_applied: localToday(), date_posted:"",
     company:"", via_recruiting_firm:false, recruiting_firm:"",
     job_title:"", location_type:"Remote", location_detail:"", days_onsite:"",
     source:"", referrer_name:"", applied_through:"", resume_version:"", rating:"",
@@ -143,8 +146,19 @@ function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, defaultTab="info
     contacts:"", notes:"", job_description:"",
     cover_letter:false, has_outreach:false, outreach_notes:"", has_referral:false,
   });
-  const [form, setForm] = useState(emptyForm());
+  const [form, setForm] = useState(()=>initialForm ? {...emptyForm(), ...initialForm} : emptyForm());
   const sf = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  // Copy for re-applying to the same company. Keeps company-level info,
+  // resets date/status, clears anything specific to the posting or this attempt.
+  const buildCopy = () => ({
+    company:form.company, via_recruiting_firm:form.via_recruiting_firm, recruiting_firm:form.recruiting_firm,
+    job_title:form.job_title,
+    location_type:form.location_type, location_detail:form.location_detail, days_onsite:form.days_onsite,
+    applied_through:form.applied_through, dashboard_link:form.dashboard_link, contacts:form.contacts,
+    has_referral:form.has_referral, referrer_name:form.referrer_name,
+    notes:`Previously applied to ${form.job_title} on ${form.date_applied}`,
+  });
 
 const STATUS_TO_TL = {
     "Applied":"pending", "Interviewing":"pending", "Offer":"pending",
@@ -155,12 +169,11 @@ const STATUS_TO_TL = {
 
   const setStatus = s => {
     sf("status", s);
-    if (timelineId) {
-      const newTl = STATUS_TO_TL[s] || "pending";
-      setTlStatus(newTl);
-      if (newTl === "rejected") { if (!closedDate) setClosedDate(localToday()); }
-      else setClosedDate("");
-    }
+    const newTl = STATUS_TO_TL[s] || "pending";
+    if (timelineId) setTlStatus(newTl);
+    // Closed date lives on the application too, so set it with or without a timeline
+    if (newTl === "rejected") { if (!closedDate) setClosedDate(localToday()); }
+    else setClosedDate("");
     if (s === "Offer" && !offerDate) { setOfferDate(localToday()); setShowOffer(true); }
   };
   // outcome: "pending" | "Ghosted" | "Rejected" | "Withdrawn" | "Accepted"
@@ -194,7 +207,7 @@ const STATUS_TO_TL = {
     api("application","GET",null,{id:appId}).then(d=>{
       const a = d.application;
       setForm({
-        date_applied:a.date_applied||"", company:a.company||"",
+        date_applied:a.date_applied||"", date_posted:a.date_posted||"", company:a.company||"",
         via_recruiting_firm:!!a.via_recruiting_firm, recruiting_firm:a.recruiting_firm||"",
         job_title:a.job_title||"", location_type:a.location_type||"Remote",
         location_detail:a.location_detail||"", days_onsite:a.days_onsite||"",
@@ -208,6 +221,7 @@ const STATUS_TO_TL = {
         cover_letter:!!a.cover_letter, has_outreach:!!a.has_outreach, outreach_notes:a.outreach_notes||"",
         has_referral:!!a.has_referral,
       });
+      if (a.date_closed) setClosedDate(a.date_closed);
       if (d.timeline) {
         const t = d.timeline;
         setTlId(t.id);
@@ -254,7 +268,7 @@ const STATUS_TO_TL = {
     setFormError("");
     setSaving(true);
     try {
-      const body = {...form, via_recruiting_firm:form.via_recruiting_firm?1:0, cover_letter:form.cover_letter?1:0, has_outreach:form.has_outreach?1:0, has_referral:form.has_referral?1:0};
+      const body = {...form, date_closed:closedDate||null, via_recruiting_firm:form.via_recruiting_firm?1:0, cover_letter:form.cover_letter?1:0, has_outreach:form.has_outreach?1:0, has_referral:form.has_referral?1:0};
       if (isNew) {
         const res = await api("application_add","POST",body);
         onSaved&&onSaved(res.id);
@@ -335,8 +349,10 @@ const STATUS_TO_TL = {
               {isNew ? "Add Application" : (editing ? "Edit Application" : (form.company||"Application"))}
             </h2>
             {!isNew && !editing && <StatusBadge status={form.status} />}
+            {isNew && copiedFrom && <div style={{ fontSize:11,color:"var(--text-muted)" }}>Copied from {copiedFrom} — review before saving</div>}
           </div>
           <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+            {isAuth && !isNew && !editing && onCopy && <button className="btn-secondary" style={{ fontSize:11,padding:"5px 10px",letterSpacing:0.5 }} title="Start a new application prefilled from this one" onClick={()=>onCopy(buildCopy(), `${form.company||form.recruiting_firm} — ${form.job_title}`)}>Copy</button>}
             {isAuth && !isNew && !editing && <button className="btn-secondary" style={{ fontSize:11,padding:"5px 10px",letterSpacing:0.5 }} onClick={()=>setEditing(true)}>Edit</button>}
             {isAuth && !isNew && <button className="btn-danger" style={{ fontSize:11,padding:"5px 10px",letterSpacing:0.5 }} onClick={()=>setDelConf(true)}>Delete</button>}
             <button className="modal-close" onClick={onClose}>✕</button>
@@ -402,11 +418,23 @@ const STATUS_TO_TL = {
                 </FormField>
               </div>
 
-              <div className="form-row">
+              <div className="form-row-3">
+                <FormField label="Date Posted">
+                  {editing||isNew
+                    ? <input className="form-input" type="date" value={form.date_posted} max={form.date_applied||undefined} onChange={e=>sf("date_posted",e.target.value)} />
+                    : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{form.date_posted||"—"}</span>}
+                </FormField>
                 <FormField label="Date Applied *">
                   {editing||isNew
                     ? <input className="form-input" type="date" value={form.date_applied} onChange={e=>sf("date_applied",e.target.value)} />
                     : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{form.date_applied}</span>}
+                  {(() => {
+                    const d = daysBetween(form.date_posted, form.date_applied);
+                    if (d === null) return null;
+                    return <div style={{ fontSize:11,color:d<0?"#f87171":"var(--text-muted)",marginTop:4 }}>
+                      {d < 0 ? "Before posting date?" : d === 0 ? "Same day as posted" : `${d} day${d===1?"":"s"} after posting`}
+                    </div>;
+                  })()}
                 </FormField>
                 <FormField label="Rating (0–100)">
                   {editing||isNew
@@ -416,6 +444,23 @@ const STATUS_TO_TL = {
                         : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>—</span>)}
                 </FormField>
               </div>
+
+              {!isNew && STATUS_TO_TL[form.status]==="rejected" && (
+                <div className="form-row-3">
+                  <FormField label="Closed Date">
+                    {editing
+                      ? <input className="form-input" type="date" value={closedDate} min={form.date_applied||undefined} onChange={e=>setClosedDate(e.target.value)} />
+                      : <span style={{ fontSize:13,color:"var(--text-secondary)" }}>{closedDate||"—"}</span>}
+                    {(() => {
+                      const d = daysBetween(form.date_applied, closedDate);
+                      if (d === null) return null;
+                      return <div style={{ fontSize:11,color:d<0?"#f87171":"var(--text-muted)",marginTop:4 }}>
+                        {d < 0 ? "Before date applied?" : d === 0 ? "Same day as applied" : `${d} day${d===1?"":"s"} after applying`}
+                      </div>;
+                    })()}
+                  </FormField>
+                </div>
+              )}
 
               <div className="form-row">
                 <FormField label="Source">
@@ -775,6 +820,7 @@ const STATUS_TO_TL = {
 function ExportModal({ onClose }) {
   const EXPORT_FIELDS = [
     { key:'status',              label:'Status' },
+    { key:'date_posted',         label:'Date Posted' },
     { key:'via_recruiting_firm', label:'Via Recruiting Firm' },
     { key:'recruiting_firm',     label:'Recruiting Firm' },
     { key:'location',            label:'Location' },

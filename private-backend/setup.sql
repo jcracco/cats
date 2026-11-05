@@ -129,6 +129,9 @@ CREATE TABLE IF NOT EXISTS applications (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id             INT UNSIGNED                NOT NULL,
     date_applied        DATE                        NOT NULL,
+    date_posted         DATE                        DEFAULT NULL,  -- when the posting went live (optional)
+    date_closed         DATE                        DEFAULT NULL,  -- set for closing statuses; NULL while active or Ghosted.
+                                                                   -- Kept in sync with timeline_entries.date_closed
 
     -- Company / recruiting firm
     company             VARCHAR(255)                DEFAULT NULL,

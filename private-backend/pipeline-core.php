@@ -15,6 +15,11 @@ const localToday = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
+// Whole days from a to b ("YYYY-MM-DD" strings); null if either is missing
+const daysBetween = (a, b) => {
+  if (!a || !b) return null;
+  return Math.round((Date.parse(b+"T00:00:00Z") - Date.parse(a+"T00:00:00Z")) / 86400000);
+};
 
 
 // API helper — routes to mockApi in demo mode, real fetch in production

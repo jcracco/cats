@@ -16,11 +16,12 @@ require_once __DIR__ . '/db.php';
 
 $pdo = db();
 
-// Mark ONLY "Applied" applications with no response after 60 days as No Answer
+// Mark ONLY "Applied" applications with no response after 60 days as No Answer,
+// stamping today as the closed date.
 // This will never touch Interviewing, Offer, Ghosted, Rejected, or any other status
 $stmt = $pdo->query("
     UPDATE applications
-    SET status = 'No Answer'
+    SET status = 'No Answer', date_closed = CURDATE()
     WHERE status = 'Applied'
     AND date_applied < DATE_SUB(CURDATE(), INTERVAL 60 DAY)
 ");
@@ -32,11 +33,11 @@ if ($count > 0) {
     $pdo->query("
         UPDATE timeline_entries t
         JOIN applications a ON t.id = a.timeline_id
-        SET t.pending = 0
+        SET t.pending = 0, t.date_closed = CURDATE()
         WHERE a.status = 'No Answer'
         AND a.date_applied < DATE_SUB(CURDATE(), INTERVAL 60 DAY)
         AND t.pending = 1
-        AND t.date_rejected IS NULL
+        AND t.date_closed IS NULL
     ");
 }
 

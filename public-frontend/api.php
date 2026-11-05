@@ -115,6 +115,13 @@ function date_or_null(array $data, string $key): ?string {
     $v = trim($data[$key] ?? '');
     return preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) ? $v : null;
 }
+// Closed date stored on the application: set for definitive closing statuses,
+// NULL while active and for Ghosted (mirrors timeline_entries.date_closed).
+const CLOSED_STATUSES = ['Rejected','Not Selected','No Answer','Withdrawn','Accepted'];
+function app_date_closed(array $b): ?string {
+    if (!in_array($b['status'] ?? 'Applied', CLOSED_STATUSES, true)) return null;
+    return date_or_null($b, 'date_closed') ?? date('Y-m-d');
+}
 function int_or_null(array $data, string $key): ?int {
     $v = $data[$key] ?? null;
     return ($v !== null && $v !== '') ? (int)$v : null;
@@ -402,15 +409,16 @@ if ($action === 'application_add') {
     auth_required();
     $b = body(); $pdo = db(); $uid = authed_uid();
     $stmt = $pdo->prepare("INSERT INTO applications
-        (user_id,date_applied,company,via_recruiting_firm,recruiting_firm,job_title,
+        (user_id,date_applied,date_posted,date_closed,company,via_recruiting_firm,recruiting_firm,job_title,
          location_type,location_detail,days_onsite,source,referrer_name,applied_through,
          resume_version,rating,status,job_id,job_link,dashboard_link,
          salary_requested,salary_listed,salary_type,contacts,notes,job_description,
          cover_letter,has_outreach,outreach_notes,has_referral)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         $uid,
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
+        date_or_null($b,'date_posted'), app_date_closed($b),
         str_or_null($b,'company'), (int)($b['via_recruiting_firm']??0), str_or_null($b,'recruiting_firm'),
         trim($b['job_title']??''), $b['location_type']??'Remote', str_or_null($b,'location_detail'),
         str_or_null($b,'days_onsite'), str_or_null($b,'source'), str_or_null($b,'referrer_name'),
@@ -434,7 +442,7 @@ if ($action === 'application_update') {
     $cur->execute([$id, $uid]); $current = $cur->fetch();
     if (!$current) fail('Not found', 404);
     $stmt = $pdo->prepare("UPDATE applications SET
-        date_applied=?,company=?,via_recruiting_firm=?,recruiting_firm=?,job_title=?,
+        date_applied=?,date_posted=?,date_closed=?,company=?,via_recruiting_firm=?,recruiting_firm=?,job_title=?,
         location_type=?,location_detail=?,days_onsite=?,source=?,referrer_name=?,applied_through=?,
         resume_version=?,rating=?,status=?,job_id=?,job_link=?,dashboard_link=?,
         salary_requested=?,salary_listed=?,salary_type=?,contacts=?,notes=?,job_description=?,
@@ -442,6 +450,7 @@ if ($action === 'application_update') {
         WHERE id=? AND user_id=?");
     $stmt->execute([
         date_or_null($b,'date_applied') ?? date('Y-m-d'),
+        date_or_null($b,'date_posted'), app_date_closed($b),
         str_or_null($b,'company'), (int)($b['via_recruiting_firm']??0), str_or_null($b,'recruiting_firm'),
         trim($b['job_title']??''), $b['location_type']??'Remote', str_or_null($b,'location_detail'),
         str_or_null($b,'days_onsite'), str_or_null($b,'source'), str_or_null($b,'referrer_name'),
@@ -573,6 +582,9 @@ if ($action === 'timeline_update') {
         (int)($b['pending']??1), date_or_null($b,'date_closed'),
         date_or_null($b,'offer_date'), str_or_null($b,'offer_notes'), $id,
     ]);
+    // Keep the application's closed date in sync with the timeline's
+    $pdo->prepare("UPDATE applications SET date_closed=? WHERE timeline_id=? AND user_id=?")
+        ->execute([date_or_null($b,'date_closed'), $id, $uid]);
     ok();
 }
 
@@ -659,13 +671,13 @@ if ($action === 'share') {
 
     $slim = !empty($_GET['slim']);
     $cols = $slim
-        ? "a.id,a.date_applied,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.location_detail,a.days_onsite,a.source,a.referrer_name,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.has_referral,a.notes,a.timeline_id"
+        ? "a.id,a.date_applied,a.date_posted,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.location_detail,a.days_onsite,a.source,a.referrer_name,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.has_referral,a.notes,a.timeline_id"
         : "a.*";
 
     $stmt = $pdo->prepare("
         SELECT $cols,
                t.date_recruiter, t.recruiter_name, t.date_screening, t.screener_name,
-               t.screening_type, t.offer_date, t.offer_notes, t.date_closed, t.pending
+               t.screening_type, t.offer_date, t.offer_notes, COALESCE(a.date_closed, t.date_closed) AS date_closed, t.pending
         FROM applications a
         LEFT JOIN timeline_entries t ON a.timeline_id = t.id
         WHERE a.user_id = ?
@@ -704,7 +716,7 @@ if ($action === 'export') {
     $stmt = $pdo->prepare("
         SELECT a.*,
                t.date_recruiter, t.recruiter_name, t.date_screening, t.screener_name,
-               t.screening_type, t.offer_date, t.offer_notes, t.date_closed
+               t.screening_type, t.offer_date, t.offer_notes, COALESCE(a.date_closed, t.date_closed) AS date_closed
         FROM applications a
         LEFT JOIN timeline_entries t ON a.timeline_id = t.id
         WHERE " . implode(' AND ', $where) . "
@@ -742,8 +754,8 @@ if ($action === 'application_status') {
     $id = (int)($_GET['id']??0); $b = body(); $pdo = db(); $uid = authed_uid();
     $status = $b['status'] ?? null;
     if (!$status) fail('Missing status');
-    $stmt = $pdo->prepare("UPDATE applications SET status=? WHERE id=? AND user_id=?");
-    $stmt->execute([$status, $id, $uid]);
+    $stmt = $pdo->prepare("UPDATE applications SET status=?, date_closed=? WHERE id=? AND user_id=?");
+    $stmt->execute([$status, in_array($status, CLOSED_STATUSES, true) ? date('Y-m-d') : null, $id, $uid]);
     // Sync timeline entry if one exists
     $cur = $pdo->prepare("SELECT timeline_id, company, job_title, date_applied, rating, via_recruiting_firm, recruiting_firm FROM applications WHERE id=? AND user_id=?");
     $cur->execute([$id, $uid]); $app = $cur->fetch();
@@ -754,7 +766,7 @@ if ($action === 'application_status') {
             // Ghosted: pending=0, NO closed date — timeline renders dotted line
             $pdo->prepare("UPDATE timeline_entries SET pending=0, date_closed=NULL WHERE id=?")
                 ->execute([$tid]);
-        } elseif (in_array($status, ['Rejected','Not Selected','No Answer','Withdrawn','Accepted'])) {
+        } elseif (in_array($status, CLOSED_STATUSES, true)) {
             // Closed with a definitive end: set today as closed date so timeline
             // renders the red dot rather than the ghosted dotted line
             $pdo->prepare("UPDATE timeline_entries SET pending=0, date_closed=? WHERE id=?")
