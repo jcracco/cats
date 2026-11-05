@@ -11,41 +11,11 @@ if (isset($_GET['share']) && isset($_GET['format']) && $_GET['format'] === 'json
     $token = trim($_GET['share']);
     if (!$token) { http_response_code(400); header('Content-Type: application/json'); echo json_encode(['ok'=>false,'error'=>'Missing token']); exit; }
 
-    $pdo  = db();
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE share_token = ?");
-    $stmt->execute([$token]);
-    $user = $stmt->fetch();
-    if (!$user) { http_response_code(403); header('Content-Type: application/json'); echo json_encode(['ok'=>false,'error'=>'Invalid token']); exit; }
-    $uid = (int)$user['id'];
-
-    $slim = !empty($_GET['slim']);
-    $cols = $slim
-        ? "a.id,a.date_applied,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.location_detail,a.days_onsite,a.source,a.referrer_name,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.notes,a.timeline_id"
-        : "a.*";
-
-    $stmt = $pdo->prepare("
-        SELECT $cols,
-               t.date_recruiter, t.recruiter_name, t.date_screening, t.screener_name,
-               t.screening_type, t.offer_date, t.offer_notes, t.date_closed, t.pending
-        FROM applications a
-        LEFT JOIN timeline_entries t ON a.timeline_id = t.id
-        WHERE a.user_id = ?
-        ORDER BY a.date_applied ASC, a.id ASC
-    ");
-    $stmt->execute([$uid]);
-    $apps = $stmt->fetchAll();
-
-    foreach ($apps as &$app) {
-        $rounds = [];
-        if ($app['timeline_id']) {
-            $rs = $pdo->prepare("SELECT interview_date, interview_type, interviewer FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
-            $rs->execute([$app['timeline_id']]);
-            $rounds = $rs->fetchAll();
-        }
-        $app['rounds'] = $rounds;
-        unset($app['contacts']);
-    }
-    unset($app);
+    require_once PRIVATE_PATH . 'share-data.php';
+    $pdo = db();
+    $uid = share_user_id($pdo, $token);
+    if ($uid === null) { http_response_code(403); header('Content-Type: application/json'); echo json_encode(['ok'=>false,'error'=>'Invalid token']); exit; }
+    $apps = share_applications($pdo, $uid, !empty($_GET['slim']));
 
     header('Content-Type: application/json');
     echo json_encode($apps, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

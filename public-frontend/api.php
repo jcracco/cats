@@ -308,7 +308,7 @@ if ($action === 'applications') {
     $sort_sql   = $sort_map[$_GET['sort'] ?? ''] ?? 'a.date_applied DESC';
     $group_order = "CASE a.status WHEN 'Interviewing' THEN 1 WHEN 'Offer' THEN 2 WHEN 'Applied' THEN 3 WHEN 'Accepted' THEN 4 WHEN 'Rejected' THEN 5 WHEN 'Ghosted' THEN 6 WHEN 'Not Selected' THEN 7 WHEN 'No Answer' THEN 8 WHEN 'Withdrawn' THEN 9 ELSE 10 END";
 
-    $sql  = "SELECT a.id, a.date_applied, a.company, a.via_recruiting_firm, a.recruiting_firm,
+    $sql  = "SELECT a.id, a.date_applied, a.date_posted, a.date_closed, a.company, a.via_recruiting_firm, a.recruiting_firm,
                     a.job_title, a.location_type, a.location_detail, a.days_onsite,
                     a.source, a.referrer_name, a.applied_through, a.resume_version, a.rating, a.status,
                     a.salary_requested, a.salary_listed, a.salary_type,
@@ -659,45 +659,11 @@ if ($action === 'revoke_share_token') {
 
 // ── Share — public read-only view ─────────────────────────────────────────────
 if ($action === 'share') {
-    $token = trim($_GET['token'] ?? '');
-    if (!$token) fail('Missing token', 400);
-
-    $pdo  = db();
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE share_token = ?");
-    $stmt->execute([$token]);
-    $user = $stmt->fetch();
-    if (!$user) fail('Invalid token', 403);
-    $uid = (int)$user['id'];
-
-    $slim = !empty($_GET['slim']);
-    $cols = $slim
-        ? "a.id,a.date_applied,a.date_posted,a.company,a.via_recruiting_firm,a.recruiting_firm,a.job_title,a.location_type,a.location_detail,a.days_onsite,a.source,a.referrer_name,a.applied_through,a.resume_version,a.rating,a.status,a.salary_requested,a.salary_listed,a.salary_type,a.job_id,a.job_link,a.dashboard_link,a.cover_letter,a.has_outreach,a.outreach_notes,a.has_referral,a.notes,a.timeline_id"
-        : "a.*";
-
-    $stmt = $pdo->prepare("
-        SELECT $cols,
-               t.date_recruiter, t.recruiter_name, t.date_screening, t.screener_name,
-               t.screening_type, t.offer_date, t.offer_notes, COALESCE(a.date_closed, t.date_closed) AS date_closed, t.pending
-        FROM applications a
-        LEFT JOIN timeline_entries t ON a.timeline_id = t.id
-        WHERE a.user_id = ?
-        ORDER BY a.date_applied ASC, a.id ASC
-    ");
-    $stmt->execute([$uid]);
-    $apps = $stmt->fetchAll();
-
-    foreach ($apps as &$app) {
-        $rounds = [];
-        if ($app['timeline_id']) {
-            $rs = $pdo->prepare("SELECT interview_date, interview_type, interviewer FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
-            $rs->execute([$app['timeline_id']]);
-            $rounds = $rs->fetchAll();
-        }
-        $app['rounds'] = $rounds;
-        unset($app['contacts']); // never expose contacts in shared view
-    }
-    unset($app);
-    ok($apps);
+    require_once PRIVATE_PATH . 'share-data.php';
+    $pdo = db();
+    $uid = share_user_id($pdo, trim($_GET['token'] ?? ''));
+    if ($uid === null) fail(empty($_GET['token']) ? 'Missing token' : 'Invalid token', empty($_GET['token']) ? 400 : 403);
+    ok(share_applications($pdo, $uid, !empty($_GET['slim'])));
 }
 
 // ── Export — full data with timeline and rounds ───────────────────────────────
@@ -716,7 +682,7 @@ if ($action === 'export') {
     $stmt = $pdo->prepare("
         SELECT a.*,
                t.date_recruiter, t.recruiter_name, t.date_screening, t.screener_name,
-               t.screening_type, t.offer_date, t.offer_notes, COALESCE(a.date_closed, t.date_closed) AS date_closed
+               t.screening_type, t.offer_date, t.offer_notes, t.date_closed AS timeline_date_closed
         FROM applications a
         LEFT JOIN timeline_entries t ON a.timeline_id = t.id
         WHERE " . implode(' AND ', $where) . "
@@ -725,10 +691,10 @@ if ($action === 'export') {
     $stmt->execute($params);
     $apps = $stmt->fetchAll();
 
+    $rs = $pdo->prepare("SELECT round_order, interview_date, interview_type, interviewer, is_final_round FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
     foreach ($apps as &$app) {
         $rounds = [];
         if ($app['timeline_id']) {
-            $rs = $pdo->prepare("SELECT interview_date, interview_type, interviewer FROM interview_rounds WHERE timeline_id=? ORDER BY round_order ASC");
             $rs->execute([$app['timeline_id']]);
             $rounds = $rs->fetchAll();
         }

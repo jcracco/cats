@@ -1062,7 +1062,7 @@ function SharedTimelineView({ allApps }) {
         applied:        a.date_applied,
         recruiter:      a.date_recruiter,
         screening:      a.date_screening,
-        rejected:       a.date_closed,
+        rejected:       a.timeline_date_closed,   // timeline's own closed date (Ghosted = null)
         offer_date:     a.offer_date || null,
         status:         a.status,
         pending:        !!a.pending,
