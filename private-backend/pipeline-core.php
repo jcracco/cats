@@ -475,7 +475,7 @@ function AppStatsBar({ stats }) {
     <div style={{ marginBottom:16 }}>
       <div className="stats-bar" style={{ marginBottom:0 }}>
         <StatGroup label="‎">
-          <StatBox label="Total Applications" value={stats.total} />
+          <StatBox label={<>Total<span className="hide-mobile"> Applications</span></>} value={stats.total} />
         </StatGroup>
         <StatGroup label="Pipeline">
           <StatBox label="Active"            value={stats.active}           pct={((stats.active/t)*100).toFixed(1)}                                                           pctLabel="of total" />
@@ -783,7 +783,7 @@ function AppFilters({ search, setSearch, showFilters, setShowFilters, activeFilt
         <option value="date_asc">Date ↑</option>
         <option value="rating_desc">Rating ↓</option>
       </select>
-      <span style={{ fontSize:11, color:"var(--text-muted)", opacity:showCount?1:0, pointerEvents:"none", whiteSpace:"nowrap", transition:"opacity 0.15s" }}>
+      <span className={showCount ? "result-count" : "result-count result-count-idle"} style={{ fontSize:11, color:"var(--text-muted)", opacity:showCount?1:0, pointerEvents:"none", whiteSpace:"nowrap", transition:"opacity 0.15s" }}>
         Showing <strong style={{ color:"var(--text-primary)" }}>{resultCount ?? 0}</strong> result{resultCount!==1?"s":""}
       </span>
     </div>

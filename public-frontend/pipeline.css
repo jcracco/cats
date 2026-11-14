@@ -1258,6 +1258,9 @@ input[type="range"]::-moz-range-thumb {
   .filters-toolbar { flex-wrap: wrap; gap: 8px; }
   .filter-search-wrap { flex: 1 1 160px; min-width: 0; }
   .filter-search { min-width: 0; width: 100%; font-size: 16px; } /* 16px stops iOS zoom-on-focus */
+  .result-count-idle { display: none; } /* invisible count would otherwise wrap onto its own empty row */
+  .stats-bar { gap: 8px; }
+  .stat-card { padding: 9px 11px 7px; min-width: 0; }
   /* iOS zooms in on focus for any field under 16px — !important beats the inline fontSize:12 in the modal */
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   select, textarea { font-size: 16px !important; }
@@ -1309,7 +1312,7 @@ input[type="range"]::-moz-range-thumb {
   .modal-header { padding-top: calc(12px + env(safe-area-inset-top, 0px)); padding-bottom: 12px; }
   .modal-tabs { margin-bottom: 14px; }
   .modal-tab-btn { flex: 1; font-size: 13px; padding-top: 10px; padding-bottom: 10px; }
-  .modal-status-pick { padding: 0 14px 12px !important; }
+  .modal-status-pick { padding: 14px 14px 12px !important; }
   .modal-status-pick .badge { font-size: 11px; padding: 6px 11px; }
   .modal-footer {
     padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
