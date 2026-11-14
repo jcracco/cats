@@ -120,6 +120,44 @@ function StatusBadge({ status }) {
   return <span className={`badge ${cfg.cls}`}>{cfg.label}</span>;
 }
 
+// ── Shared: useIsMobile — tracks a max-width media query ─────────────────────
+const MOBILE_QUERY = "(max-width: 768px)"; // keep in sync with the 768px block in pipeline.css
+function useIsMobile(query = MOBILE_QUERY) {
+  const [match, setMatch] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const h = e => setMatch(e.matches);
+    mq.addEventListener("change", h);
+    setMatch(mq.matches);
+    return () => mq.removeEventListener("change", h);
+  }, [query]);
+  return match;
+}
+
+// ── Shared: useVisualViewportVars — while active, mirrors the visible viewport
+// into --vv-top / --vv-h so a full-screen mobile modal can sit above the
+// on-screen keyboard (iOS overlays the keyboard; 100dvh does not shrink).
+function useVisualViewportVars(active) {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!active || !vv) return;
+    const root = document.documentElement.style;
+    const sync = () => {
+      root.setProperty("--vv-top", `${vv.offsetTop}px`);
+      root.setProperty("--vv-h",   `${vv.height}px`);
+    };
+    sync();
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    return () => {
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+      root.removeProperty("--vv-top");
+      root.removeProperty("--vv-h");
+    };
+  }, [active]);
+}
+
 // ── Shared: Dot (timeline) ────────────────────────────────────────────────────
 function Dot({ x, color, glow, size=9, border=false }) {
   return <div style={{ position:"absolute", left:`${x}%`, top:"50%", width:size, height:size, borderRadius:"50%", background:color, transform:"translate(-50%,-50%)", zIndex:2, boxShadow:glow?`0 0 10px ${color}`:"none", border:border?"2px solid var(--bg)":"none", transition:"box-shadow 0.15s" }} />;
@@ -396,12 +434,12 @@ function TimelineStatsRow({ sorted, zones, totalApps }) {
         <StatGroup label="‎">
           <StatBox label="Total Interviews" value={totalIntvw} />
         </StatGroup>
-        <button onClick={()=>setShowMore(m=>!m)} style={{ alignSelf:"flex-end", background:"none", border:"none", color:"var(--text-dim)", fontSize:10, cursor:"pointer", letterSpacing:0.5, padding:"6px 4px", whiteSpace:"nowrap" }}>
+        <button className="hide-mobile" onClick={()=>setShowMore(m=>!m)} style={{ alignSelf:"flex-end", background:"none", border:"none", color:"var(--text-dim)", fontSize:10, cursor:"pointer", letterSpacing:0.5, padding:"6px 4px", whiteSpace:"nowrap" }}>
           {showMore ? "Less ▲" : "More ▼"}
         </button>
       </div>
       {showMore && (
-        <div className="stats-bar" style={{ marginTop:6, marginBottom:0, animation:"dropdownIn 0.14s ease" }}>
+        <div className="stats-bar hide-mobile" style={{ marginTop:6, marginBottom:0, animation:"dropdownIn 0.14s ease" }}>
           <StatGroup label="Process Time">
             <StatBox label="Avg → Recruiter"  value={`${avgR}d`} />
             <StatBox label="Avg → Screening"  value={`${avgS}d`} />
@@ -420,9 +458,9 @@ function TimelineStatsRow({ sorted, zones, totalApps }) {
 }
 
 // ── Applications: StatsBar ────────────────────────────────────────────────────
-function StatGroup({ children, label }) {
+function StatGroup({ children, label, className="" }) {
   return (
-    <div className="stat-group">
+    <div className={`stat-group ${className}`}>
       {label && <div className="stat-group-label">{label}</div>}
       <div className="stat-group-cards">{children}</div>
     </div>
@@ -430,9 +468,9 @@ function StatGroup({ children, label }) {
 }
 
 function AppStatsBar({ stats }) {
+  const [showMore, setShowMore] = useState(false);
   if (!stats) return <div className="stats-bar"><div className="stat-card"><div className="stat-card-value">…</div></div></div>;
   const t = stats.total || 1;
-  const [showMore, setShowMore] = useState(false);
   return (
     <div style={{ marginBottom:16 }}>
       <div className="stats-bar" style={{ marginBottom:0 }}>
@@ -443,15 +481,15 @@ function AppStatsBar({ stats }) {
           <StatBox label="Active"            value={stats.active}           pct={((stats.active/t)*100).toFixed(1)}                                                           pctLabel="of total" />
           <StatBox label="Reached Recruiter" value={stats.reached_recruiter} pct={stats.reached_recruiter!=null?((stats.reached_recruiter/t)*100).toFixed(1):null}            pctLabel="of total" />
         </StatGroup>
-        <StatGroup label="Activity">
+        <StatGroup label="Activity" className="hide-mobile">
           <StatBox label="This Week" value={stats.this_week} />
         </StatGroup>
-        <button onClick={()=>setShowMore(m=>!m)} style={{ alignSelf:"flex-end", background:"none", border:"none", color:"var(--text-dim)", fontSize:10, cursor:"pointer", letterSpacing:0.5, padding:"6px 4px", whiteSpace:"nowrap" }}>
+        <button className="hide-mobile" onClick={()=>setShowMore(m=>!m)} style={{ alignSelf:"flex-end", background:"none", border:"none", color:"var(--text-dim)", fontSize:10, cursor:"pointer", letterSpacing:0.5, padding:"6px 4px", whiteSpace:"nowrap" }}>
           {showMore ? "Less ▲" : "More ▼"}
         </button>
       </div>
       {showMore && (
-        <div className="stats-bar" style={{ marginTop:6, marginBottom:0, animation:"dropdownIn 0.14s ease" }}>
+        <div className="stats-bar hide-mobile" style={{ marginTop:6, marginBottom:0, animation:"dropdownIn 0.14s ease" }}>
           <StatGroup label="Pipeline">
             <StatBox label="Did Not Progress" value={stats.closed_no_prog} pct={((stats.closed_no_prog/t)*100).toFixed(1)} pctLabel="of total" />
           </StatGroup>
@@ -481,14 +519,14 @@ function MultiDropdown({ label, options, value, onChange }) {
   const toggle = v => onChange(value.includes(v) ? value.filter(x=>x!==v) : [...value, v]);
   const active = value.length > 0;
   return (
-    <div ref={ref} style={{ position:"relative" }}>
+    <div ref={ref} className="fdrop" style={{ position:"relative" }}>
       <button onClick={()=>setOpen(o=>!o)} className={`pill ${active?"active":""}`} style={{ display:"flex", alignItems:"center", gap:5 }}>
         {label}
         <span style={{ minWidth:26, textAlign:"center", fontSize:10 }}>{active?`(${value.length})`:""}</span>
         <span style={{ fontSize:9, opacity:0.7 }}>{open?"▲":"▼"}</span>
       </button>
       {open && (
-        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:210, maxHeight:300, overflowY:"auto", boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
+        <div className="fdrop-pop" style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:210, maxHeight:300, overflowY:"auto", boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
           {value.length > 0
             ? <button onClick={()=>onChange([])} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>CLEAR</button>
             : <div style={{ borderBottom:"1px solid var(--border)", color:"var(--text-dim)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", letterSpacing:1 }}>SHOWING ALL</div>
@@ -519,14 +557,14 @@ function StatusDropdown({ value, onChange }) {
   const toggle = v => onChange(value.includes(v) ? value.filter(x=>x!==v) : [...value, v]);
   const active = value.length > 0;
   return (
-    <div ref={ref} style={{ position:"relative" }}>
+    <div ref={ref} className="fdrop" style={{ position:"relative" }}>
       <button onClick={()=>setOpen(o=>!o)} className={`pill ${active?"active":""}`} style={{ display:"flex", alignItems:"center", gap:5 }}>
         Status
         <span style={{ minWidth:26, textAlign:"center", fontSize:10 }}>{active?`(${value.length})`:""}</span>
         <span style={{ fontSize:9, opacity:0.7 }}>{open?"▲":"▼"}</span>
       </button>
       {open && (
-        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:180, boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
+        <div className="fdrop-pop" style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:180, boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
           {value.length > 0
             ? <button onClick={()=>onChange([])} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>CLEAR</button>
             : <div style={{ borderBottom:"1px solid var(--border)", color:"var(--text-dim)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", letterSpacing:1 }}>SHOWING ALL</div>
@@ -549,7 +587,7 @@ function StatusDropdown({ value, onChange }) {
 function DateRangePicker({ dateFrom, setDateFrom, dateTo, setDateTo }) {
   const active = dateFrom || dateTo;
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+    <div className="date-range" style={{ display:"flex", alignItems:"center", gap:6 }}>
       <span style={{ fontSize:10, color:"var(--text-muted)", whiteSpace:"nowrap" }}>From</span>
       <input type="date" value={dateFrom||""} onChange={e=>setDateFrom(e.target.value||null)}
         style={{ background:"var(--input-bg)", border:"1px solid var(--input-border)", borderRadius:6,
@@ -628,14 +666,14 @@ function ExtrasDropdown({ value, onChange }) {
   );
 
   return (
-    <div ref={ref} style={{ position:"relative" }}>
+    <div ref={ref} className="fdrop" style={{ position:"relative" }}>
       <button onClick={()=>setOpen(o=>!o)} className={`pill ${hasAny?"active":""}`} style={{ display:"flex", alignItems:"center", gap:5 }}>
         Extras
         <span style={{ minWidth:26, textAlign:"center", fontSize:10 }}>{hasAny?`(${activeCount})`:""}</span>
         <span style={{ fontSize:9, opacity:0.7 }}>{open?"▲":"▼"}</span>
       </button>
       {open && (
-        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:170, boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
+        <div className="fdrop-pop" style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:170, boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
           {hasAny
             ? <button onClick={clearAll} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>CLEAR</button>
             : <div style={{ borderBottom:"1px solid var(--border)", color:"var(--text-dim)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", letterSpacing:1 }}>SHOWING ALL</div>
@@ -663,13 +701,13 @@ function StageDropdown({ value, onChange }) {
   },[]);
   const current = STAGE_FILTERS.find(s => s.value === value);
   return (
-    <div ref={ref} style={{ position:"relative" }}>
+    <div ref={ref} className="fdrop" style={{ position:"relative" }}>
       <button onClick={()=>setOpen(o=>!o)} className={`pill ${current?"active":""}`} style={{ display:"flex", alignItems:"center", gap:5 }}>
         {current ? `Stage: ${current.label}` : "Stage"}
         <span style={{ fontSize:9, opacity:0.7, marginLeft:4 }}>{open?"▲":"▼"}</span>
       </button>
       {open && (
-        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:240, boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
+        <div className="fdrop-pop" style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--modal-bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 0", zIndex:200, minWidth:240, boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
           {current
             ? <button onClick={()=>{ onChange(null); setOpen(false); }} style={{ width:"100%", background:"none", border:"none", borderBottom:"1px solid var(--border)", color:"var(--text-muted)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", cursor:"pointer", textAlign:"left", letterSpacing:1 }}>CLEAR</button>
             : <div style={{ borderBottom:"1px solid var(--border)", color:"var(--text-dim)", fontFamily:"inherit", fontSize:10, padding:"5px 12px", letterSpacing:1 }}>SHOWING ALL</div>
@@ -694,13 +732,17 @@ function StageDropdown({ value, onChange }) {
 // ── Filter bar (second row, shown when Filters is toggled) ────────────────────
 function FilterBar({ statusFilter, setStatusFilter, stageFilter, setStageFilter, resumeFilter, setResumeFilter, sourceFilter, setSourceFilter, appliedFilter, setAppliedFilter, allResumeVersions, allSources, allAppliedThrough, ratingMin, setRatingMin, salaryMin, setSalaryMin, salaryType, setSalaryType, dateFrom, setDateFrom, dateTo, setDateTo, extrasFilter, setExtrasFilter, onResetAll }) {
   return (
-    <div className="filters" style={{ marginTop:-8, marginBottom:16, animation:"dropdownIn 0.14s ease" }}>
+    <div className="filters filter-bar" style={{ marginTop:-8, marginBottom:16, animation:"dropdownIn 0.14s ease" }}>
       <StatusDropdown value={statusFilter} onChange={setStatusFilter} />
       <StageDropdown value={stageFilter} onChange={setStageFilter} />
-      <MultiDropdown label="Resume" options={allResumeVersions} value={resumeFilter} onChange={setResumeFilter} />
-      <MultiDropdown label="Source" options={allSources} value={sourceFilter} onChange={setSourceFilter} />
-      <MultiDropdown label="Applied Via" options={allAppliedThrough} value={appliedFilter} onChange={setAppliedFilter} />
+      {/* Desktop-only filters (hidden on mobile; display:contents keeps desktop layout unchanged) */}
+      <div className="desktop-only-group hide-mobile">
+        <MultiDropdown label="Resume" options={allResumeVersions} value={resumeFilter} onChange={setResumeFilter} />
+        <MultiDropdown label="Source" options={allSources} value={sourceFilter} onChange={setSourceFilter} />
+        <MultiDropdown label="Applied Via" options={allAppliedThrough} value={appliedFilter} onChange={setAppliedFilter} />
+      </div>
       <ExtrasDropdown value={extrasFilter} onChange={setExtrasFilter} />
+      <div className="desktop-only-group hide-mobile">
       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
         <span style={{ fontSize:10, color:"var(--text-muted)", whiteSpace:"nowrap" }}>Rating ≥</span>
         <input type="range" min={0} max={100} step={5} value={ratingMin} onChange={e=>setRatingMin(Number(e.target.value))} style={{ width:80, cursor:"pointer" }} />
@@ -710,8 +752,9 @@ function FilterBar({ statusFilter, setStatusFilter, stageFilter, setStageFilter,
         <button onClick={()=>setRatingMin(0)} style={{ background:"none", border:"none", color:"var(--text-muted)", fontSize:12, padding:0, lineHeight:1, opacity:ratingMin>0?1:0, cursor:ratingMin>0?"pointer":"default", pointerEvents:ratingMin>0?"auto":"none" }}>✕</button>
       </div>
       <SalarySlider salaryMin={salaryMin} setSalaryMin={setSalaryMin} salaryType={salaryType} setSalaryType={setSalaryType} />
+      </div>
       <DateRangePicker dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} />
-      <button onClick={onResetAll} className="pill" style={{ fontSize:10, color:"var(--text-muted)", letterSpacing:0.5 }}>Clear all</button>
+      <button onClick={onResetAll} className="pill filter-clear-all" style={{ fontSize:10, color:"var(--text-muted)", letterSpacing:0.5 }}>Clear all</button>
     </div>
   );
 }
@@ -719,8 +762,8 @@ function FilterBar({ statusFilter, setStatusFilter, stageFilter, setStageFilter,
 // ── Slim toolbar (search + filters toggle + grouped + sort) ───────────────────
 function AppFilters({ search, setSearch, showFilters, setShowFilters, activeFilterCount, grouped, setGrouped, sort, setSort, resultCount, showCount }) {
   return (
-    <div className="filters" style={{ flexWrap:"nowrap" }}>
-      <div style={{ position:"relative", display:"inline-flex", alignItems:"center" }}>
+    <div className="filters filters-toolbar">
+      <div className="filter-search-wrap" style={{ position:"relative", display:"inline-flex", alignItems:"center" }}>
         <input className="filter-search" placeholder="Search company or role…" value={search} onChange={e=>setSearch(e.target.value)} style={{ paddingRight: search ? 28 : 12 }} />
         {search && (
           <button onClick={()=>setSearch("")} style={{ position:"absolute", right:8, background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:14, lineHeight:1, padding:0 }}>✕</button>
@@ -735,7 +778,7 @@ function AppFilters({ search, setSearch, showFilters, setShowFilters, activeFilt
       <button onClick={()=>setGrouped(g=>!g)} className={`pill${grouped?" active":""}`} style={{ minWidth:82 }}>
         {grouped ? "⊞ Grouped" : "≡ Flat"}
       </button>
-      <select className="sort-select" value={sort} onChange={e=>setSort(e.target.value)}>
+      <select className="sort-select hide-mobile" value={sort} onChange={e=>setSort(e.target.value)}>
         <option value="date_desc">Date ↓</option>
         <option value="date_asc">Date ↑</option>
         <option value="rating_desc">Rating ↓</option>
@@ -750,6 +793,8 @@ function AppFilters({ search, setSearch, showFilters, setShowFilters, activeFilt
 function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_desc", hasFilters=false }) {
   const [collapsed, setCollapsed]   = useState({});
   const [ctxMenu, setCtxMenu]       = useState(null); // {appId, x, y}
+  const [sheet, setSheet]           = useState(null); // mobile status sheet: {appId, status, label}
+  const isMobile = useIsMobile();
   const toggleGroup = g => setCollapsed(c => ({...c, [g]: !c[g]}));
 
   // Close context menu on outside click
@@ -826,6 +871,82 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
     return `${a.location_type}${a.location_detail ? ` (${a.location_detail})` : ""}`;
   };
 
+  const ratingPill = a => (
+    <span className={a.rating>=65&&a.rating<80?"rating-badge-mid":""} style={{ display:"inline-block", fontSize:10, fontWeight:700, color:rc(a.rating), background:rb(a.rating), padding:"1px 5px", borderRadius:3 }}>{a.rating ?? "—"}</span>
+  );
+
+  // ── Mobile: card list + bottom-sheet status picker ─────────────────────────
+  if (isMobile) {
+    const transitions = sheet ? (STATUS_TRANSITIONS[sheet.status] || []) : [];
+    return (
+      <>
+      <div className="app-cards">
+        {rows.map(r => {
+          if (r.type === "header") return (
+            <button key={`g-${r.g}`} className="app-card-group" onClick={()=>toggleGroup(r.g)}>
+              <span className="app-card-group-dot" style={{ background:GROUP_COLORS[r.g], boxShadow:`0 0 5px ${GROUP_COLORS[r.g]}80` }} />
+              {GROUP_LABELS[r.g]}
+              <span className="app-card-group-count">({r.count})</span>
+              <span className="app-card-group-chevron">{collapsed[r.g] ? "▶" : "▼"}</span>
+            </button>
+          );
+          const a = r.a;
+          const canEdit = !!onStatusChange;
+          return (
+            <div key={a.id} className="app-card" role="button" tabIndex={0}
+              onClick={()=>onRowClick&&onRowClick(a)}
+              onKeyDown={e=>{ if(e.key==="Enter") onRowClick&&onRowClick(a); }}>
+              <div className="app-card-top">
+                <span className="app-card-company">{displayCompany(a)}</span>
+                {a.rating != null && ratingPill(a)}
+              </div>
+              <div className="app-card-mid">
+                <span className="app-card-role">{a.job_title || "—"}</span>
+                {a.salary_listed && <span className="app-card-salary">{a.salary_listed}{a.salary_type==="Hourly" ? " /h" : ""}</span>}
+              </div>
+              <div className="app-card-meta">
+                <span className="app-card-sub">{a.date_applied}{a.date_applied ? " · " : ""}{displayLoc(a)}</span>
+                {canEdit
+                  ? <button className="status-tap" aria-label={`Change status (${a.status})`}
+                      onClick={e=>{ e.stopPropagation(); setSheet({ appId:a.id, status:a.status, label:displayCompany(a) }); }}>
+                      <StatusBadge status={a.status} /><span className="status-tap-chevron">▾</span>
+                    </button>
+                  : <StatusBadge status={a.status} />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {sheet && ReactDOM.createPortal(
+        <div className="sheet-backdrop" onClick={()=>setSheet(null)}>
+          <div className="sheet" role="dialog" aria-label="Change status" onClick={e=>e.stopPropagation()}>
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <span className="sheet-title">{sheet.label}</span>
+              <span className="sheet-current">
+                <span className="sheet-dot" style={{ background:STATUS_DOT_COLORS[sheet.status] }} />
+                {sheet.status}
+              </span>
+            </div>
+            {transitions.length === 0
+              ? <div className="sheet-empty">No transitions available</div>
+              : transitions.map(s => (
+                <button key={s} className="sheet-item"
+                  onClick={()=>{ onStatusChange(sheet.appId, s); setSheet(null); }}>
+                  <span className="sheet-dot" style={{ background:STATUS_DOT_COLORS[s] }} />
+                  {s}
+                </button>
+              ))}
+            <button className="sheet-cancel" onClick={()=>setSheet(null)}>Cancel</button>
+          </div>
+        </div>,
+        document.body
+      )}
+      </>
+    );
+  }
+
   return (
     <>
     <div className="app-table-wrap">
@@ -836,12 +957,12 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
             <th>Company</th>
             <th>Role</th>
             <th>Status</th>
-            <th>Source</th>
-            <th>Via</th>
-            <th>Boosters</th>
-            <th>Resume</th>
+            <th className="col-source">Source</th>
+            <th className="col-via">Via</th>
+            <th className="col-boosters">Boosters</th>
+            <th className="col-resume">Resume</th>
             <th>Rating</th>
-            <th>Location</th>
+            <th className="col-location">Location</th>
             <th>Salary</th>
           </tr>
         </thead>
@@ -864,15 +985,15 @@ function AppTable({ apps, onRowClick, onStatusChange, grouped=true, sort="date_d
                 <td className="col-company" title={displayCompany(a)}>{displayCompany(a)}</td>
                 <td className="col-title"  title={a.job_title}>{a.job_title}</td>
                 <td><StatusBadge status={a.status} /></td>
-                <td>{a.source ? (() => {
+                <td className="col-source">{a.source ? (() => {
                   const sc = SOURCE_COLORS[a.source];
                   return <span className="source-pill" style={sc?{background:sc.bg,color:sc.color,borderColor:sc.border}:{}}>{a.source}</span>;
                 })() : "—"}</td>
-                <td>{a.applied_through || "—"}</td>
-                <td>{displayBoosters(a)}</td>
-                <td>{a.resume_version || "—"}</td>
-                <td className="col-rating"><span className={a.rating>=65&&a.rating<80?"rating-badge-mid":""} style={{ display:"inline-block", fontSize:10, fontWeight:700, color:rc(a.rating), background:rb(a.rating), padding:"1px 5px", borderRadius:3 }}>{a.rating ?? "—"}</span></td>
-                <td>{displayLoc(a)}</td>
+                <td className="col-via">{a.applied_through || "—"}</td>
+                <td className="col-boosters">{displayBoosters(a)}</td>
+                <td className="col-resume">{a.resume_version || "—"}</td>
+                <td className="col-rating">{ratingPill(a)}</td>
+                <td className="col-location">{displayLoc(a)}</td>
                 <td className="col-salary" title={salaryTooltip(a)}>{displaySalary(a) || "—"}</td>
               </tr>
             );

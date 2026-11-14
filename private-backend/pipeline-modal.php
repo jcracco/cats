@@ -51,7 +51,7 @@ function DeleteConfirm({ label, onConfirm, onCancel }) {
   const [val, setVal] = useState("");
   return (
     <>
-      <div className="modal-backdrop" onClick={onCancel} style={{ background:"rgba(0,0,0,0.7)",zIndex:600 }} />
+      <div className="modal-backdrop delete-backdrop" onClick={onCancel} style={{ background:"rgba(0,0,0,0.7)",zIndex:600 }} />
       <div className="delete-confirm">
         <h3 className="delete-confirm-title">Delete {label}?</h3>
         <p className="delete-confirm-desc">
@@ -99,7 +99,7 @@ function LookupDropdown({ type, value, onChange, placeholder="Select…" }) {
       <div style={{ display:"flex",gap:6,alignItems:"center" }}>
         <input className="form-input" style={{ flex:1 }} value={newName}
           onChange={e=>setNewName(e.target.value)} placeholder="Enter name…" autoFocus
-          onKeyDown={e=>{ if(e.key==="Enter") submitNew(); if(e.key==="Escape"){ setAdding(false); setNewName(""); } }} />
+          onKeyDown={e=>{ if(e.key==="Enter"){ e.preventDefault(); submitNew(); } if(e.key==="Escape"){ setAdding(false); setNewName(""); } }} />
         <button className="btn-primary" style={{ fontSize:11,padding:"5px 10px",whiteSpace:"nowrap" }}
           onClick={submitNew} disabled={saving||!newName.trim()}>{saving?"…":"Add"}</button>
         <button className="btn-secondary" style={{ fontSize:11,padding:"5px 10px" }}
@@ -127,6 +127,8 @@ function LookupDropdown({ type, value, onChange, placeholder="Select…" }) {
 // onCopy(prefill, label): parent opens a new prefilled AppModal
 function AppModal({ appId, isAuth, onClose, onSaved, onDeleted, onCopy, initialForm=null, copiedFrom=null, defaultTab="info" }) {
   const isNew = appId === null;
+  const isMobile = useIsMobile();
+  useVisualViewportVars(isMobile);
   const [tab, setTab]         = useState(defaultTab);
   const [editing, setEditing] = useState(isNew);
   const [busy, setBusy]       = useState(false);
@@ -328,6 +330,17 @@ const STATUS_TO_TL = {
   const updateStage = (i,k,v) => setStages(s=>{ const n=[...s]; n[i]={...n[i],[k]:v}; return n; });
   const hasTl = !!timelineId;
 
+  // Enter in a single-line field saves (textareas keep Enter for new lines;
+  // buttons keep their own Enter; inputs that handle Enter themselves call preventDefault)
+  const onFormKeyDown = e => {
+    if (e.key !== "Enter" || e.defaultPrevented || e.nativeEvent.isComposing) return;
+    if (!(editing || isNew) || saving || delConf) return;
+    const tag = e.target.tagName;
+    if (tag !== "INPUT" && tag !== "SELECT") return;
+    e.preventDefault();
+    save();
+  };
+
   if (busy) return (
     <>
       <div className="modal-backdrop" onClick={onClose} />
@@ -340,9 +353,30 @@ const STATUS_TO_TL = {
   return (
     <>
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="app-modal modal-fixed-height">
+      <div className="app-modal modal-fixed-height" onKeyDown={onFormKeyDown}>
 
         {/* Header — fixed, never scrolls */}
+        {isMobile ? (
+          /* Mobile header: title + close on one row, status + Copy/Edit below; Delete lives in the edit footer */
+          <div className="modal-header modal-header-mobile">
+            <div className="mh-title-row">
+              <h2>{isNew ? "Add Application" : (editing ? "Edit Application" : (form.company||"Application"))}</h2>
+              <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+            </div>
+            {!isNew && !editing && (
+              <div className="mh-sub-row">
+                <StatusBadge status={form.status} />
+                {isAuth && (
+                  <div className="mh-acts">
+                    {onCopy && <button className="btn-secondary" title="Start a new application prefilled from this one" onClick={()=>onCopy(buildCopy(), `${form.company||form.recruiting_firm} — ${form.job_title}`)}>Copy</button>}
+                    <button className="btn-secondary" onClick={()=>setEditing(true)}>Edit</button>
+                  </div>
+                )}
+              </div>
+            )}
+            {isNew && copiedFrom && <div style={{ fontSize:11,color:"var(--text-muted)" }}>Copied from {copiedFrom} — review before saving</div>}
+          </div>
+        ) : (
         <div className="modal-header">
           <div>
             <h2 style={{ fontSize:16,fontWeight:700,color:"var(--text-primary)",marginBottom:4 }}>
@@ -358,10 +392,11 @@ const STATUS_TO_TL = {
             <button className="modal-close" onClick={onClose}>✕</button>
           </div>
         </div>
+        )}
 
         {/* Status picker — fixed, above tabs, edit mode only */}
         {editing && !isNew && (
-          <div style={{ padding:"0 28px 14px", borderBottom:"1px solid var(--border)" }}>
+          <div className="modal-status-pick" style={{ padding:"0 28px 14px", borderBottom:"1px solid var(--border)" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:7, alignItems:"center" }}>
               {[form.status, ...(STATUS_TRANSITIONS[form.status]||[])].map(s => {
                 const cfg = STATUS_CONFIG[s];
@@ -383,8 +418,8 @@ const STATUS_TO_TL = {
 
         {/* Tabs — fixed */}
         <div className="modal-tabs">
-          <button className={`modal-tab-btn ${tab==="info"?"active":""}`} onClick={()=>setTab("info")}>Application Info</button>
-          <button className={`modal-tab-btn ${tab==="interview"?"active":""}`} onClick={()=>setTab("interview")}>Interview Info</button>
+          <button className={`modal-tab-btn ${tab==="info"?"active":""}`} onClick={()=>setTab("info")}>{isMobile ? "Application" : "Application Info"}</button>
+          <button className={`modal-tab-btn ${tab==="interview"?"active":""}`} onClick={()=>setTab("interview")}>{isMobile ? "Interviews" : "Interview Info"}</button>
         </div>
 
         {/* Scrollable content area */}
@@ -807,6 +842,7 @@ const STATUS_TO_TL = {
             </button>
             {!isNew && <button className="btn-secondary" onClick={()=>{ setEditing(false); setFormError(""); }}>Cancel</button>}
             {formError && <span style={{ fontSize:11, color:"#f87171", marginLeft:4 }}>{formError}</span>}
+            {isMobile && isAuth && !isNew && <button className="btn-danger" style={{ marginLeft:"auto" }} onClick={()=>setDelConf(true)}>Delete</button>}
           </div>
         )}
       </div>

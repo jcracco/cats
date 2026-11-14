@@ -1052,9 +1052,298 @@ input[type="range"]::-moz-range-thumb {
   border: none;
 }
 
+/* ── Mobile card list (AppTable at 768px and under) ──────────────────────── */
+.app-cards { display: flex; flex-direction: column; gap: 8px; }
+
+.app-card-group {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  padding: 14px 2px 4px;
+  min-height: 44px;
+  cursor: pointer;
+  text-align: left;
+}
+.app-card-group-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+.app-card-group-count { margin-left: 8px; letter-spacing: 1px; }
+.app-card-group-chevron { margin-left: auto; }
+
+.app-card {
+  background: var(--stat-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+.app-card:active { background: var(--table-row-hover); }
+.app-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.app-card-company {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-card-mid {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 2px;
+}
+.app-card-role {
+  font-size: 13px;
+  color: var(--text-active);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-card-salary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.app-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.app-card-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-card .badge { font-size: 10px; padding: 4px 10px; }
+
+/* Tappable status badge — padded out to a ~44px touch target */
+.status-tap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  padding: 10px 0 10px 12px;
+  margin: -10px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.status-tap-chevron { font-size: 10px; color: var(--text-muted); }
+
+/* ── Bottom sheet (mobile status picker) ─────────────────────────────────── */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 900;
+  display: flex;
+  align-items: flex-end;
+  animation: fadeIn 0.15s ease;
+}
+.sheet {
+  width: 100%;
+  background: var(--modal-bg);
+  border-top: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  padding: 8px 0 calc(12px + env(safe-area-inset-bottom));
+  max-height: 80dvh;
+  overflow-y: auto;
+  animation: sheetUp 0.2s ease;
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.35);
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  margin: 0 auto 10px;
+}
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sheet-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sheet-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.sheet-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.sheet-item, .sheet-cancel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 20px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet-item:active, .sheet-cancel:active { background: var(--table-row-hover); }
+.sheet-cancel {
+  justify-content: center;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.sheet-empty { font-size: 13px; color: var(--text-dim); padding: 16px 20px; }
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
+.filters-toolbar { flex-wrap: nowrap; }
+.desktop-only-group { display: contents; }
+
+/* Table column priority (above 768px the table is shown; below it, cards).
+   Least useful columns go first; Date, Company, Role, Status, Rating and
+   Salary are always kept. */
+@media (max-width: 1280px) {
+  .app-table .col-via, .app-table .col-resume { display: none; }
+}
+@media (max-width: 1100px) {
+  .app-table .col-boosters, .app-table .col-source { display: none; }
+}
+@media (max-width: 900px) {
+  .app-table .col-location { display: none; }
+}
+
+/* Phone / small tablet — keep in sync with MOBILE_QUERY in pipeline-core.php */
 @media (max-width: 768px) {
   .page { padding: 20px 14px; }
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
-  .app-table th:nth-child(n+5), .app-table td:nth-child(n+5) { display: none; }
+  .hide-mobile { display: none !important; }
+  .filters-toolbar { flex-wrap: wrap; gap: 8px; }
+  .filter-search-wrap { flex: 1 1 160px; min-width: 0; }
+  .filter-search { min-width: 0; width: 100%; font-size: 16px; } /* 16px stops iOS zoom-on-focus */
+  /* iOS zooms in on focus for any field under 16px — !important beats the inline fontSize:12 in the modal */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select, textarea { font-size: 16px !important; }
+
+  /* Filter panel: vertical stack, dropdowns expand inline (accordion) instead of floating */
+  .filter-bar { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 0 !important; }
+  .fdrop { width: 100%; }
+  .fdrop > .pill {
+    width: 100%;
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .fdrop > .pill > span:last-child { margin-left: auto !important; } /* beats StageDropdown's inline marginLeft */
+  .fdrop-pop {
+    position: static !important;
+    min-width: 0 !important;
+    max-height: none !important;
+    margin-top: 4px;
+    box-shadow: none !important;
+  }
+  .fdrop-pop label { padding: 11px 14px !important; font-size: 14px !important; }
+  .fdrop-pop input[type="checkbox"], .fdrop-pop input[type="radio"] { width: 18px; height: 18px; }
+  .date-range { width: 100%; }
+  .date-range input[type="date"] { flex: 1; min-width: 0; font-size: 16px !important; padding: 8px !important; }
+  .filter-clear-all { min-height: 44px; }
+}
+
+/* ── Full-screen application modal (mobile) ──────────────────────────────── */
+@media (max-width: 768px) {
+  /* Sized to the *visible* viewport (--vv-* set by useVisualViewportVars) so the
+     footer sits above the on-screen keyboard; 100dvh is the fallback. */
+  .app-modal,
+  .app-modal.modal-fixed-height {
+    top: var(--vv-top, 0);
+    left: 0;
+    transform: none;
+    width: 100%;
+    height: var(--vv-h, 100dvh);
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    animation: fadeIn 0.15s ease;
+    z-index: 1001; /* above the sticky demo banner */
+  }
+  .modal-header,
+  .modal-tabs,
+  .modal-body { padding-left: 14px; padding-right: 14px; }
+  .modal-header { padding-top: calc(12px + env(safe-area-inset-top, 0px)); padding-bottom: 12px; }
+  .modal-tabs { margin-bottom: 14px; }
+  .modal-tab-btn { flex: 1; font-size: 13px; padding-top: 10px; padding-bottom: 10px; }
+  .modal-status-pick { padding: 0 14px 12px !important; }
+  .modal-status-pick .badge { font-size: 11px; padding: 6px 11px; }
+  .modal-footer {
+    padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    align-items: center;
+  }
+  .modal-footer .btn-primary { flex: 1; min-height: 44px; }
+  .modal-footer .btn-secondary,
+  .modal-footer .btn-danger { min-height: 44px; padding-left: 14px; padding-right: 14px; }
+
+  .modal-header-mobile { flex-direction: column; align-items: stretch; gap: 10px; border-bottom: 1px solid var(--input-border); }
+  .mh-title-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .mh-title-row h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mh-title-row .modal-close { font-size: 22px; padding: 8px; margin: -8px -6px -8px 0; }
+  .mh-sub-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .mh-sub-row .badge { font-size: 10px; padding: 4px 10px; }
+  .mh-acts { display: flex; gap: 8px; }
+  .mh-acts .btn-secondary { font-size: 13px; min-height: 36px; padding: 0 14px; }
+
+  .delete-backdrop { z-index: 1002 !important; }
+  .delete-confirm { z-index: 1003; width: min(340px, calc(100vw - 32px)); }
+
+  /* Small modals (share, login, export): fit the screen width */
+  .modal-sm, .export-modal { width: calc(100vw - 32px); max-width: 480px; }
+  .modal-sm-header { padding: 16px 16px 12px; }
+  .modal-sm-body { padding: 16px; }
+  .share-url-row { flex-direction: column; }
+  .share-url-input { padding: 10px; }
+  .share-url-row button { min-height: 44px; }
 }

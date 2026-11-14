@@ -185,6 +185,9 @@ function App() {
     return h==="timeline" ? "timeline" : "applications";
   });
   useEffect(()=>{ window.location.hash = tab; },[tab]);
+  // Timeline is desktop-only: on mobile always show Applications (without touching the hash)
+  const isMobile = useIsMobile();
+  const shownTab = isMobile ? "applications" : tab;
   useEffect(()=>{
     const h = ()=>{ const t=window.location.hash.replace("#",""); if(t==="timeline"||t==="applications") setTab(t); };
     window.addEventListener("hashchange",h); return()=>window.removeEventListener("hashchange",h);
@@ -289,7 +292,7 @@ function App() {
                       <UsersIcon size={14} /> User Management
                     </a>
                   )}
-                  <button className="user-menu-item" onClick={()=>{ setShowExport(true); setShowUserMenu(false); }}>
+                  <button className="user-menu-item hide-mobile" onClick={()=>{ setShowExport(true); setShowUserMenu(false); }}>
                     <Download size={14} /> Export CSV
                   </button>
                   <button className="user-menu-item" onClick={()=>{ setShowShare(true); setShowUserMenu(false); }}>
@@ -308,7 +311,7 @@ function App() {
               )}
             </div>
           ) : window.IS_DEMO ? (<>
-            <button title="Export to CSV" className="icon-btn" onClick={()=>setShowExport(true)}><Download size={15} /></button>
+            <button title="Export to CSV" className="icon-btn hide-mobile" onClick={()=>setShowExport(true)}><Download size={15} /></button>
             <button title={theme==="dark"?"Light mode":"Dark mode"} className="icon-btn" onClick={toggleTheme}>
               {theme==="dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
@@ -319,7 +322,7 @@ function App() {
       </div>
 
       {/* Tabs */}
-      <div className="tabs">
+      <div className="tabs hide-mobile">
         <button className={`tab-btn ${tab==="applications"?"active":""}`} onClick={()=>setTab("applications")}>
           Applications
         </button>
@@ -329,7 +332,7 @@ function App() {
       </div>
 
       {/* Tab content */}
-      {tab==="applications" && (
+      {shownTab==="applications" && (
         <ApplicationsTab
           isAuth={isAuth}
           onOpenApp={openApp}
@@ -342,7 +345,7 @@ function App() {
           }}
         />
       )}
-      {tab==="timeline" && (
+      {shownTab==="timeline" && (
         <TimelineTab
           isAuth={isAuth}
           onRowClick={isAuth ? openTl : null}
